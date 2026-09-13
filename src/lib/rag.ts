@@ -1,6 +1,6 @@
 import { LOOKING_LABEL, ROLE_LABEL, STATUS_LABEL } from "./labels"
-import { MODULES, moduleLines, isFieldFilled, doneCount, canAccessProject } from "./modules"
-import type { Peer, Project } from "../types"
+import { DEFAULT_MODULES, moduleLines, isFieldFilled, doneCount, canAccessProject } from "./modules"
+import type { ModuleDef, Peer, Project } from "../types"
 import type { ScoutLink } from "./scout"
 
 export type RagChunk = {
@@ -16,6 +16,7 @@ export type RagCtx = {
   projects: Project[]
   me: Peer
   isModerator: boolean
+  modules?: ModuleDef[]
 }
 
 function tokenize(text: string) {
@@ -32,6 +33,7 @@ function uniqueTokens(text: string) {
 
 export function buildCorpus(ctx: RagCtx): RagChunk[] {
   const chunks: RagChunk[] = []
+  const modules = ctx.modules && ctx.modules.length > 0 ? ctx.modules : DEFAULT_MODULES
 
   chunks.push({
     id: "meta-me",
@@ -84,7 +86,7 @@ export function buildCorpus(ctx: RagCtx): RagChunk[] {
       `Стек: ${project.stack.join(", ")}.`,
       `Нужны роли: ${need || "никого"}.`,
       `Состав: ${project.memberIds.length}.`,
-      privateOk ? `Модули пройдено: ${doneCount(project)}/${MODULES.length}.` : "",
+      privateOk ? `Модули пройдено: ${doneCount(project, modules)}/${modules.length}.` : "",
       privateOk && project.pagerNote ? `Заметка one-pager: ${project.pagerNote}` : "",
       !privateOk ? "Ответы модулей и one-pager закрыты." : "",
     ]
@@ -101,8 +103,8 @@ export function buildCorpus(ctx: RagCtx): RagChunk[] {
 
     if (!privateOk) continue
 
-    for (const module of MODULES) {
-      const lines = moduleLines(project, module.id).filter((line) => isFieldFilled(line.value))
+    for (const module of modules) {
+      const lines = moduleLines(project, module.id, modules).filter((line) => isFieldFilled(line.value))
       if (lines.length === 0) continue
       const body = lines.map((line) => `${line.label}: ${line.value}`).join(". ")
       const text = `Проект ${project.title}, модуль ${module.title}. ${body}`

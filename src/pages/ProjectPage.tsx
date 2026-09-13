@@ -9,7 +9,6 @@ import {
   doneCount,
   isModuleDone,
   isUnlocked,
-  MODULES,
 } from "../lib/modules"
 import { useStore } from "../store"
 import { PROJECT_STATUSES, ROLES, type ModuleId, type ProjectStatus, type Role } from "../types"
@@ -31,16 +30,18 @@ export function ProjectPage() {
     toggleInterest,
     acceptMember,
     rejectInterest,
+    modules,
   } = useStore()
   const project = projects.find((item) => item.id === id)
   const requested = params.get("m") as ModuleId | null
-  const canOpen = (moduleId: ModuleId) => Boolean(project && (isModerator || isUnlocked(project, moduleId)))
+  const canOpen = (moduleId: ModuleId) =>
+    Boolean(project && (isModerator || isUnlocked(project, moduleId, modules)))
   const selected =
-    project && requested && MODULES.some((item) => item.id === requested) && canOpen(requested)
+    project && requested && modules.some((item) => item.id === requested) && canOpen(requested)
       ? requested
       : project
-        ? currentModuleId(project)
-        : "problem"
+        ? currentModuleId(project, modules)
+        : modules[0]?.id ?? ""
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
   const [title, setTitle] = useState("")
@@ -83,18 +84,20 @@ export function ProjectPage() {
   const canEdit = fullAccess && isMember && !isModerator
   const canModerateJoin = isModerator || board.ownerId === currentUser.id
   const interested = board.interestIds.includes(currentUser.id)
-  const module = MODULES.find((item) => item.id === selected) ?? MODULES[0]
-  const done = doneCount(board)
-  const nextModule = MODULES.find(
-    (item, index) => index > MODULES.findIndex((step) => step.id === module.id) && isUnlocked(board, item.id),
+  const module = modules.find((item) => item.id === selected) ?? modules[0]
+  const done = doneCount(board, modules)
+  const moduleIndex = module ? modules.findIndex((step) => step.id === module.id) : -1
+  const nextModule = modules.find(
+    (item, index) => index > moduleIndex && isUnlocked(board, item.id, modules),
   )
 
   function openModule(moduleId: ModuleId) {
-    if (!isModerator && !isUnlocked(board, moduleId)) return
+    if (!isModerator && !isUnlocked(board, moduleId, modules)) return
     setParams({ m: moduleId })
   }
 
   function onSave() {
+    if (!module) return
     saveAnswer(board.id, module.id, draft)
     setSaved(true)
   }
@@ -173,7 +176,7 @@ export function ProjectPage() {
         </div>
         <div className="flex flex-col items-end gap-3">
           <p className="text-sm text-mute">
-            {done}/{MODULES.length}
+            {done}/{modules.length}
           </p>
           <Link
             to={`/project/${project.id}/onepager`}
@@ -185,9 +188,15 @@ export function ProjectPage() {
       </div>
 
       {fullAccess && isModerator && !isMember ? (
-        <p className="mt-4 rounded-2xl border border-line bg-panel px-4 py-3 text-sm text-mute">
-          Режим модератора: только просмотр и approve/reject заявок. Название, описание и модули правит команда.
-        </p>
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel px-4 py-3">
+          <p className="text-sm text-mute">Просмотр · заявки</p>
+          <Link
+            to="/moderate"
+            className="shrink-0 rounded-full border border-line px-3 py-1.5 text-xs text-mute hover:border-white/20 hover:text-white"
+          >
+            ← модерация
+          </Link>
+        </div>
       ) : null}
 
       {canEdit ? (
@@ -251,9 +260,7 @@ export function ProjectPage() {
 
       {canModerateJoin && project.interestIds.length > 0 ? (
         <section className="mt-6 rounded-2xl border border-accent/40 bg-panel p-5">
-          <p className="text-xs uppercase tracking-wider text-accent">
-            {isModerator ? "заявки · approve / reject" : "заявки в команду"}
-          </p>
+          <p className="text-xs uppercase tracking-wider text-accent">заявки</p>
           <div className="mt-3 grid gap-3">
             {project.interestIds.map((peerId) => {
               const peer = peerById(peerId)
@@ -294,11 +301,11 @@ export function ProjectPage() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[16rem_1fr]">
         <ol className="flex flex-col">
-          {MODULES.map((item, index) => {
-            const open = isModerator || isUnlocked(project, item.id)
-            const doneItem = isModuleDone(project, item.id)
-            const here = item.id === module.id
-            const last = index === MODULES.length - 1
+          {modules.map((item, index) => {
+            const open = isModerator || isUnlocked(project, item.id, modules)
+            const doneItem = isModuleDone(project, item.id, modules)
+            const here = module ? item.id === module.id : false
+            const last = index === modules.length - 1
             return (
               <li key={item.id} className="flex flex-col">
                 <button
@@ -349,6 +356,8 @@ export function ProjectPage() {
         </ol>
 
         <section className="rounded-2xl border border-line bg-panel p-5">
+          {module ? (
+            <>
           <h2 className="text-2xl font-semibold">{module.title}</h2>
           <p className="mt-1 text-sm text-mute">{module.hint}</p>
 
@@ -388,6 +397,10 @@ export function ProjectPage() {
               {saved ? <span className="text-xs text-mute">сохранено</span> : null}
             </div>
           ) : null}
+            </>
+          ) : (
+            <p className="text-sm text-mute">Нет модулей в программе.</p>
+          )}
         </section>
       </div>
 

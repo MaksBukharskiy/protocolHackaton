@@ -2,7 +2,7 @@ import { emptyAnswers, fillModule } from "../lib/modules"
 import type { Peer, Project } from "../types"
 
 export const STORAGE_KEY = "launchlab21"
-export const STORAGE_VERSION = 7
+export const STORAGE_VERSION = 8
 
 export const peers: Peer[] = [
   {

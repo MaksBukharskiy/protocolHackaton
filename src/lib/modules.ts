@@ -1,19 +1,9 @@
-import type { ModuleId, Project } from "../types"
+import type { ModuleDef, ModuleId, Project } from "../types"
 
-export type TemplateField = {
-  id: string
-  label: string
-  placeholder: string
-}
+export type { ModuleDef, TemplateField } from "../types"
 
-export type ModuleDef = {
-  id: ModuleId
-  title: string
-  hint: string
-  fields: readonly TemplateField[]
-}
-
-export const MODULES: readonly ModuleDef[] = [
+/** Seed / default Launch Lab modules. Runtime list lives in store. */
+export const DEFAULT_MODULES: ModuleDef[] = [
   {
     id: "problem",
     title: "Проблема",
@@ -76,75 +66,101 @@ export const MODULES: readonly ModuleDef[] = [
   },
 ]
 
+/** @deprecated Use store.modules or pass modules explicitly. */
+export const MODULES = DEFAULT_MODULES
+
 export type FieldMap = Record<string, string>
 
-export function emptyFields(id: ModuleId): FieldMap {
-  const module = MODULES.find((item) => item.id === id)
+function list(modules?: readonly ModuleDef[]) {
+  return modules && modules.length > 0 ? modules : DEFAULT_MODULES
+}
+
+export function emptyFields(id: ModuleId, modules?: readonly ModuleDef[]): FieldMap {
+  const module = list(modules).find((item) => item.id === id)
   if (!module) return {}
   return Object.fromEntries(module.fields.map((field) => [field.id, ""]))
 }
 
-export function emptyAnswers(): Record<ModuleId, FieldMap> {
-  return {
-    problem: emptyFields("problem"),
-    audience: emptyFields("audience"),
-    solution: emptyFields("solution"),
-    wedge: emptyFields("wedge"),
-    ask: emptyFields("ask"),
-    next: emptyFields("next"),
-  }
+export function emptyAnswers(modules?: readonly ModuleDef[]): Record<string, FieldMap> {
+  return Object.fromEntries(list(modules).map((module) => [module.id, emptyFields(module.id, modules)]))
 }
 
-export function fillModule(id: ModuleId, values: FieldMap): FieldMap {
-  return { ...emptyFields(id), ...values }
+export function fillModule(id: ModuleId, values: FieldMap, modules?: readonly ModuleDef[]): FieldMap {
+  return { ...emptyFields(id, modules), ...values }
 }
 
 export function isFieldFilled(value: string | undefined) {
   return Boolean(value?.trim())
 }
 
-export function isModuleDone(project: Project, id: ModuleId) {
-  const module = MODULES.find((item) => item.id === id)
+export function isModuleDone(project: Project, id: ModuleId, modules?: readonly ModuleDef[]) {
+  const module = list(modules).find((item) => item.id === id)
   if (!module) return false
   const answers = project.answers[id] ?? {}
   return module.fields.every((field) => isFieldFilled(answers[field.id]))
 }
 
-export function moduleIndex(id: ModuleId) {
-  return MODULES.findIndex((item) => item.id === id)
+export function moduleIndex(id: ModuleId, modules?: readonly ModuleDef[]) {
+  return list(modules).findIndex((item) => item.id === id)
 }
 
-export function isUnlocked(project: Project, id: ModuleId) {
-  const index = moduleIndex(id)
-  if (index <= 0) return true
-  const prev = MODULES[index - 1]
-  return isModuleDone(project, prev.id)
+export function isUnlocked(project: Project, id: ModuleId, modules?: readonly ModuleDef[]) {
+  const catalog = list(modules)
+  const index = moduleIndex(id, catalog)
+  if (index < 0) return false
+  if (index === 0) return true
+  const prev = catalog[index - 1]
+  return isModuleDone(project, prev.id, catalog)
 }
 
-export function currentModuleId(project: Project): ModuleId {
-  return MODULES.find((item) => !isModuleDone(project, item.id))?.id ?? MODULES[MODULES.length - 1].id
+export function currentModuleId(project: Project, modules?: readonly ModuleDef[]): ModuleId {
+  const catalog = list(modules)
+  if (catalog.length === 0) return ""
+  return catalog.find((item) => !isModuleDone(project, item.id, catalog))?.id ?? catalog[catalog.length - 1].id
 }
 
-export function doneCount(project: Project) {
-  return MODULES.filter((item) => isModuleDone(project, item.id)).length
+export function doneCount(project: Project, modules?: readonly ModuleDef[]) {
+  const catalog = list(modules)
+  return catalog.filter((item) => isModuleDone(project, item.id, catalog)).length
 }
 
-export function leftCount(project: Project) {
-  return MODULES.length - doneCount(project)
+export function leftCount(project: Project, modules?: readonly ModuleDef[]) {
+  const catalog = list(modules)
+  return catalog.length - doneCount(project, catalog)
 }
 
-export function isComplete(project: Project) {
-  return doneCount(project) === MODULES.length
+export function isComplete(project: Project, modules?: readonly ModuleDef[]) {
+  const catalog = list(modules)
+  return catalog.length > 0 && doneCount(project, catalog) === catalog.length
 }
 
-export function moduleLines(project: Project, id: ModuleId) {
-  const module = MODULES.find((item) => item.id === id)
+export function moduleLines(project: Project, id: ModuleId, modules?: readonly ModuleDef[]) {
+  const module = list(modules).find((item) => item.id === id)
   if (!module) return []
   const answers = project.answers[id] ?? {}
   return module.fields.map((field) => ({
     label: field.label,
     value: answers[field.id] ?? "",
   }))
+}
+
+export function slugifyModuleId(title: string, existing: readonly ModuleDef[]) {
+  const base =
+    title
+      .trim()
+      .toLowerCase()
+      .replaceAll("ё", "е")
+      .replace(/[^a-z0-9а-я]+/gi, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 32) || "module"
+  let id = base
+  let n = 2
+  const taken = new Set(existing.map((item) => item.id))
+  while (taken.has(id)) {
+    id = `${base}-${n}`
+    n += 1
+  }
+  return id
 }
 
 export function canAccessProject(project: Project, userId: string | undefined, isModerator: boolean) {

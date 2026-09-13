@@ -1,13 +1,14 @@
 import { Link } from "react-router-dom"
 import { ROLE_LABEL, STATUS_LABEL } from "../lib/labels"
-import { doneCount, MODULES } from "../lib/modules"
+import { doneCount } from "../lib/modules"
 import { useStore } from "../store"
 import type { Project } from "../types"
 import { Avatar, Chip } from "./ui"
 
 export function ProjectCard({ project }: { project: Project }) {
-  const { peerById } = useStore()
+  const { peerById, modules } = useStore()
   const owner = peerById(project.ownerId)
+  const done = doneCount(project, modules)
 
   return (
     <Link
@@ -29,7 +30,7 @@ export function ProjectCard({ project }: { project: Project }) {
       </div>
       <div className="mt-5 flex items-center justify-between gap-3">
         <p className="text-[11px] uppercase tracking-wider text-mute">
-          модули {doneCount(project)}/{MODULES.length} · ищем:{" "}
+          модули {done}/{modules.length} · ищем:{" "}
           {project.neededRoles.map((role) => ROLE_LABEL[role]).join(", ") || "никого"}
         </p>
         {owner ? (

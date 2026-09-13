@@ -7,8 +7,8 @@ import {
   type ReactNode,
 } from "react"
 import { STORAGE_KEY, STORAGE_VERSION, peers as seedPeers, projects as seedProjects } from "./data/seed"
-import { emptyAnswers } from "./lib/modules"
-import type { AccessRole, AppState, ModuleId, Peer, Project } from "./types"
+import { DEFAULT_MODULES, emptyAnswers, emptyFields, slugifyModuleId } from "./lib/modules"
+import type { AccessRole, AppState, ModuleDef, ModuleId, Peer, Project, TemplateField } from "./types"
 
 type Store = {
   currentUser: Peer | null
@@ -16,6 +16,7 @@ type Store = {
   isModerator: boolean
   peers: Peer[]
   projects: Project[]
+  modules: ModuleDef[]
   login: (peerId: string) => void
   verify: (nickname: string, password: string) => Peer | undefined
   register: (input: {
@@ -26,7 +27,11 @@ type Store = {
   }) => string
   logout: () => void
   updatePeer: (peerId: string, patch: Partial<Peer>) => void
-  createProject: (input: Omit<Project, "id" | "ownerId" | "memberIds" | "interestIds" | "answers" | "pagerNote"> & { extraMembers?: string[] }) => string
+  createProject: (
+    input: Omit<Project, "id" | "ownerId" | "memberIds" | "interestIds" | "answers" | "pagerNote"> & {
+      extraMembers?: string[]
+    },
+  ) => string
   updateProject: (
     projectId: string,
     patch: Partial<Pick<Project, "title" | "teamName" | "pitch" | "pagerNote" | "status" | "neededRoles" | "stack">>,
@@ -35,11 +40,21 @@ type Store = {
   toggleInterest: (projectId: string) => void
   acceptMember: (projectId: string, peerId: string) => void
   rejectInterest: (projectId: string, peerId: string) => void
+  addModule: (input: { title: string; hint: string; fields: TemplateField[] }) => string
+  deleteModule: (moduleId: ModuleId) => void
+  moveModule: (moduleId: ModuleId, direction: -1 | 1) => void
   resetDemo: () => void
   peerById: (id: string) => Peer | undefined
 }
 
 const StoreContext = createContext<Store | null>(null)
+
+function cloneModules(source: readonly ModuleDef[] = DEFAULT_MODULES): ModuleDef[] {
+  return source.map((module) => ({
+    ...module,
+    fields: module.fields.map((field) => ({ ...field })),
+  }))
+}
 
 function emptyState(): AppState {
   return {
@@ -49,6 +64,7 @@ function emptyState(): AppState {
     peers: seedPeers,
     projects: seedProjects,
     passwords: Object.fromEntries(seedPeers.map((peer) => [peer.id, "21"])),
+    modules: cloneModules(),
   }
 }
 
@@ -68,6 +84,7 @@ function loadState(): AppState {
         ...Object.fromEntries(seedPeers.map((peer) => [peer.id, "21"])),
         ...parsed.passwords,
       },
+      modules: Array.isArray(parsed.modules) && parsed.modules.length > 0 ? parsed.modules : cloneModules(),
     }
   } catch {
     return emptyState()
@@ -90,6 +107,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const currentUser = state.peers.find((p) => p.id === state.currentUserId) ?? null
     const currentRole = currentUser?.accessRole ?? null
     const isModerator = currentRole === "moderator"
+    const modules = state.modules.length > 0 ? state.modules : cloneModules()
 
     return {
       currentUser,
@@ -97,6 +115,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       isModerator,
       peers: state.peers,
       projects: state.projects,
+      modules,
       peerById: (id) => state.peers.find((p) => p.id === id),
       login: (peerId) => {
         const peer = state.peers.find((item) => item.id === peerId)
@@ -157,7 +176,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ownerId,
           memberIds: [ownerId, ...extra],
           interestIds: [],
-          answers: emptyAnswers(),
+          answers: emptyAnswers(modules),
           pagerNote: "",
         }
         commit({ ...state, projects: [project, ...state.projects] })
@@ -240,6 +259,61 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             }
           }),
         })
+      },
+      addModule: (input) => {
+        if (state.currentRole !== "moderator") return ""
+        const title = input.title.trim()
+        if (!title) return ""
+        const fields = input.fields
+          .map((field, index) => ({
+            id: field.id.trim() || `field-${index + 1}`,
+            label: field.label.trim(),
+            placeholder: field.placeholder.trim(),
+          }))
+          .filter((field) => field.label)
+        if (fields.length === 0) return ""
+        const id = slugifyModuleId(title, modules)
+        const nextModule: ModuleDef = {
+          id,
+          title,
+          hint: input.hint.trim(),
+          fields,
+        }
+        commit({
+          ...state,
+          modules: [...modules, nextModule],
+          projects: state.projects.map((project) => ({
+            ...project,
+            answers: {
+              ...project.answers,
+              [id]: emptyFields(id, [nextModule]),
+            },
+          })),
+        })
+        return id
+      },
+      deleteModule: (moduleId) => {
+        if (state.currentRole !== "moderator") return
+        if (!modules.some((item) => item.id === moduleId)) return
+        if (modules.length <= 1) return
+        commit({
+          ...state,
+          modules: modules.filter((item) => item.id !== moduleId),
+          projects: state.projects.map((project) => {
+            const { [moduleId]: _removed, ...rest } = project.answers
+            return { ...project, answers: rest }
+          }),
+        })
+      },
+      moveModule: (moduleId, direction) => {
+        if (state.currentRole !== "moderator") return
+        const index = modules.findIndex((item) => item.id === moduleId)
+        const target = index + direction
+        if (index < 0 || target < 0 || target >= modules.length) return
+        const next = [...modules]
+        const [item] = next.splice(index, 1)
+        next.splice(target, 0, item)
+        commit({ ...state, modules: next })
       },
     }
   }, [commit, state])

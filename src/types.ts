@@ -31,8 +31,24 @@ export type Peer = {
   accessRole: AccessRole
 }
 
+/** Runtime module ids are strings so moderators can add custom modules. */
+export type ModuleId = string
+
+/** Seed ids kept for reference / migrations. */
 export const MODULE_IDS = ["problem", "audience", "solution", "wedge", "ask", "next"] as const
-export type ModuleId = (typeof MODULE_IDS)[number]
+
+export type TemplateField = {
+  id: string
+  label: string
+  placeholder: string
+}
+
+export type ModuleDef = {
+  id: ModuleId
+  title: string
+  hint: string
+  fields: TemplateField[]
+}
 
 export type Project = {
   id: string
@@ -45,7 +61,7 @@ export type Project = {
   neededRoles: Role[]
   memberIds: string[]
   interestIds: string[]
-  answers: Record<ModuleId, Record<string, string>>
+  answers: Record<string, Record<string, string>>
   pagerNote: string
 }
 
@@ -56,4 +72,5 @@ export type AppState = {
   peers: Peer[]
   projects: Project[]
   passwords: Record<string, string>
+  modules: ModuleDef[]
 }

@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom"
 import { Empty } from "../components/ui"
-import { doneCount, isComplete, MODULES } from "../lib/modules"
+import { doneCount, isComplete } from "../lib/modules"
 import { useStore } from "../store"
 
 export function OnePagersPage() {
-  const { projects, currentUser, isModerator } = useStore()
+  const { projects, currentUser, isModerator, modules } = useStore()
   if (!currentUser) return null
 
   const scope = isModerator
@@ -25,14 +25,14 @@ export function OnePagersPage() {
       ) : (
         <div className="mt-8 divide-y divide-line border-y border-line">
           {scope.map((project) => {
-            const done = doneCount(project)
-            const ready = isComplete(project)
+            const done = doneCount(project, modules)
+            const ready = isComplete(project, modules)
             return (
               <div key={project.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
                 <div className="min-w-0">
                   <p className="truncate font-medium">{project.title}</p>
                   <p className="text-xs text-mute">
-                    {project.teamName} · {done}/{MODULES.length}
+                    {project.teamName} · {done}/{modules.length}
                     {ready ? " · готово" : " · черновик"}
                   </p>
                 </div>

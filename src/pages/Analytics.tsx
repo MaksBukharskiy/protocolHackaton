@@ -13,7 +13,7 @@ import {
   YAxis,
 } from "recharts"
 import { ROLE_LABEL, STATUS_LABEL } from "../lib/labels"
-import { doneCount, isComplete, isModuleDone, MODULES } from "../lib/modules"
+import { doneCount, isComplete, isModuleDone } from "../lib/modules"
 import { useStore } from "../store"
 import type { ProjectStatus, Role } from "../types"
 
@@ -35,7 +35,7 @@ const tooltipStyle = {
 }
 
 export function AnalyticsPage() {
-  const { projects, peers, currentUser, isModerator } = useStore()
+  const { projects, peers, currentUser, isModerator, modules } = useStore()
 
   const scope = useMemo(() => {
     if (!currentUser) return []
@@ -43,21 +43,21 @@ export function AnalyticsPage() {
     return projects.filter((p) => p.memberIds.includes(currentUser.id) || p.ownerId === currentUser.id)
   }, [currentUser, isModerator, projects])
 
-  const filledModules = scope.reduce((sum, p) => sum + doneCount(p), 0)
-  const maxModules = scope.length * MODULES.length || 1
-  const complete = scope.filter(isComplete).length
+  const filledModules = scope.reduce((sum, p) => sum + doneCount(p, modules), 0)
+  const maxModules = scope.length * modules.length || 1
+  const complete = scope.filter((p) => isComplete(p, modules)).length
   const interests = scope.reduce((sum, p) => sum + p.interestIds.length, 0)
   const openPeers = peers.filter((p) => p.lookingFor !== "none").length
   const avgProgress = Math.round((filledModules / maxModules) * 100)
 
   const moduleChart = useMemo(
     () =>
-      MODULES.map((module) => ({
+      modules.map((module) => ({
         name: module.title,
-        done: scope.filter((p) => isModuleDone(p, module.id)).length,
-        left: Math.max(scope.length - scope.filter((p) => isModuleDone(p, module.id)).length, 0),
+        done: scope.filter((p) => isModuleDone(p, module.id, modules)).length,
+        left: Math.max(scope.length - scope.filter((p) => isModuleDone(p, module.id, modules)).length, 0),
       })),
-    [scope],
+    [modules, scope],
   )
 
   const statusChart = useMemo(() => {
@@ -78,10 +78,10 @@ export function AnalyticsPage() {
         id: project.id,
         name: project.title.length > 14 ? `${project.title.slice(0, 14)}…` : project.title,
         full: project.title,
-        progress: Math.round((doneCount(project) / MODULES.length) * 100),
-        modules: doneCount(project),
+        progress: Math.round((doneCount(project, modules) / (modules.length || 1)) * 100),
+        modules: doneCount(project, modules),
       })),
-    [scope],
+    [modules, scope],
   )
 
   const roleChart = useMemo(() => {
@@ -218,8 +218,8 @@ export function AnalyticsPage() {
           <p className="mb-3 text-sm text-mute">проекты</p>
           <div className="space-y-2">
             {scope.map((project) => {
-              const done = doneCount(project)
-              const pct = Math.round((done / MODULES.length) * 100)
+              const done = doneCount(project, modules)
+              const pct = Math.round((done / (modules.length || 1)) * 100)
               return (
                 <Link
                   key={project.id}
@@ -232,7 +232,7 @@ export function AnalyticsPage() {
                   </div>
                   <div className="w-28 shrink-0">
                     <p className="mb-1 text-right text-xs text-mute">
-                      {done}/{MODULES.length}
+                      {done}/{modules.length}
                     </p>
                     <div className="h-1.5 overflow-hidden rounded-full bg-ink">
                       <div className="h-full rounded-full bg-accent" style={{ width: `${pct}%` }} />

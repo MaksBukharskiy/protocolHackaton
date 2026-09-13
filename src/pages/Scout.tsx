@@ -16,10 +16,10 @@ function wait(ms: number) {
 }
 
 export function ScoutPage() {
-  const { peers, projects, currentUser, isModerator } = useStore()
+  const { peers, projects, currentUser, isModerator, modules } = useStore()
   const ctx = useMemo(
-    () => (currentUser ? { peers, projects, me: currentUser, isModerator } : null),
-    [currentUser, isModerator, peers, projects],
+    () => (currentUser ? { peers, projects, me: currentUser, isModerator, modules } : null),
+    [currentUser, isModerator, modules, peers, projects],
   )
   const [messages, setMessages] = useState<Msg[]>([])
   const [text, setText] = useState("")

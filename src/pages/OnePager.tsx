@@ -2,12 +2,12 @@ import { useEffect, useState } from "react"
 import { Link, Navigate, useParams } from "react-router-dom"
 import { Brand } from "../components/Logo"
 import { Avatar, AccessDenied, Empty, inputClass } from "../components/ui"
-import { canAccessProject, isComplete, isFieldFilled, MODULES, moduleLines } from "../lib/modules"
+import { canAccessProject, isComplete, isFieldFilled, moduleLines } from "../lib/modules"
 import { useStore } from "../store"
 
 export function OnePagerPage() {
   const { id } = useParams()
-  const { projects, currentUser, currentRole, isModerator, peerById, updateProject } = useStore()
+  const { projects, currentUser, currentRole, isModerator, peerById, updateProject, modules } = useStore()
   const project = projects.find((item) => item.id === id)
   const [note, setNote] = useState("")
   const [editing, setEditing] = useState(false)
@@ -25,7 +25,7 @@ export function OnePagerPage() {
 
   const board = project
   const members = board.memberIds.map((memberId) => peerById(memberId)).filter(Boolean)
-  const ready = isComplete(board)
+  const ready = isComplete(board, modules)
   const canEdit = board.memberIds.includes(currentUser.id) && !isModerator
 
   function onSaveNote() {
@@ -81,8 +81,8 @@ export function OnePagerPage() {
           </div>
 
           <div className="mt-10 space-y-8">
-            {MODULES.map((item, index) => {
-              const lines = moduleLines(project, item.id)
+            {modules.map((item, index) => {
+              const lines = moduleLines(project, item.id, modules)
               const empty = lines.every((line) => !isFieldFilled(line.value))
               return (
                 <section key={item.id}>

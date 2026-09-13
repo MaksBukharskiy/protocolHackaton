@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom"
 import { ProjectCard } from "../components/ProjectCard"
 import { Empty } from "../components/ui"
-import { doneCount, MODULES } from "../lib/modules"
+import { doneCount } from "../lib/modules"
 import { useStore } from "../store"
 
 export function FeedPage() {
-  const { projects, currentUser, isModerator } = useStore()
+  const { projects, currentUser, isModerator, modules } = useStore()
   if (!currentUser) return null
 
   const mine = isModerator
@@ -48,7 +48,7 @@ export function FeedPage() {
             <div key={project.id}>
               <ProjectCard project={project} />
               <p className="mt-2 px-1 text-xs text-mute">
-                модули {doneCount(project)}/{MODULES.length}
+                модули {doneCount(project, modules)}/{modules.length}
               </p>
             </div>
           ))}
