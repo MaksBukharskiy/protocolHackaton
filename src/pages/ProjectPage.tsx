@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
-import { Avatar, Empty, FieldLabel, inputClass } from "../components/ui"
+import { Avatar, AccessDenied, Empty, FieldLabel, inputClass } from "../components/ui"
 import { ROLE_LABEL, STATUS_LABEL } from "../lib/labels"
 import {
   canAccessProject,
@@ -71,7 +71,11 @@ export function ProjectPage() {
   const previewOk = canPreviewProject(project, currentUser.id, isModerator)
 
   if (!previewOk) {
-    return <Empty title="Закрыто" hint="Этот проект не набирает команду и недоступен посторонним." />
+    return (
+      <div className="-mx-4 -my-8 grid min-h-[calc(100dvh)] place-items-center bg-ink sm:-mx-8">
+        <AccessDenied />
+      </div>
+    )
   }
 
   const board = project

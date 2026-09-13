@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { Link, Navigate, useParams } from "react-router-dom"
 import { Brand } from "../components/Logo"
-import { Avatar, Empty, inputClass } from "../components/ui"
+import { Avatar, AccessDenied, Empty, inputClass } from "../components/ui"
 import { canAccessProject, isComplete, isFieldFilled, MODULES, moduleLines } from "../lib/modules"
 import { useStore } from "../store"
 
@@ -18,9 +18,9 @@ export function OnePagerPage() {
   }, [project?.id, project?.pagerNote])
 
   if (!currentUser || !currentRole) return <Navigate to="/login" replace />
-  if (!project) return <EmptyShell title="Проект не найден" />
+  if (!project) return <EmptyShell kind="missing" />
   if (!canAccessProject(project, currentUser.id, isModerator)) {
-    return <EmptyShell title="Закрыто" />
+    return <EmptyShell kind="denied" />
   }
 
   const board = project
@@ -143,12 +143,12 @@ export function OnePagerPage() {
   )
 }
 
-function EmptyShell({ title }: { title: string }) {
+function EmptyShell({ kind }: { kind: "missing" | "denied" }) {
   return (
     <div className="grid min-h-dvh place-items-center bg-ink px-4">
       <div className="text-center">
-        <Empty title={title} />
-        <Link to="/onepagers" className="mt-4 inline-block text-sm text-accent">
+        {kind === "denied" ? <AccessDenied /> : <Empty title="Проект не найден" />}
+        <Link to="/onepagers" className="mt-2 inline-block text-sm text-accent">
           ← к списку
         </Link>
       </div>

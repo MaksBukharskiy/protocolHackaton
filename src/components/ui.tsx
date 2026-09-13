@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 
 const AVATAR_TONES = ["#1ecb5c", "#16a34a", "#4ade80", "#15803d", "#86efac"]
 
@@ -9,14 +9,25 @@ export function toneFrom(id: string) {
 }
 
 export function Avatar({ id, nickname, size = "md" }: { id: string; nickname: string; size?: "sm" | "md" | "lg" }) {
+  const [broken, setBroken] = useState(false)
   const dim = size === "lg" ? "size-16 text-xl" : size === "sm" ? "size-8 text-xs" : "size-11 text-sm"
+  if (broken) {
+    return (
+      <div
+        className={`grid shrink-0 place-items-center rounded-full font-semibold text-white ${dim}`}
+        style={{ background: toneFrom(id) }}
+      >
+        {nickname.slice(0, 2).toUpperCase()}
+      </div>
+    )
+  }
   return (
-    <div
-      className={`grid shrink-0 place-items-center rounded-full font-semibold text-white ${dim}`}
-      style={{ background: toneFrom(id) }}
-    >
-      {nickname.slice(0, 2).toUpperCase()}
-    </div>
+    <img
+      src={`/avatars/${id}.png`}
+      alt={nickname}
+      className={`shrink-0 rounded-full object-cover ${dim}`}
+      onError={() => setBroken(true)}
+    />
   )
 }
 
@@ -37,6 +48,21 @@ export function Empty({ title, hint }: { title: string; hint?: string }) {
     <div className="rounded-2xl border border-dashed border-line px-6 py-16 text-center">
       <p className="text-lg">{title}</p>
       {hint ? <p className="mt-2 text-sm text-mute">{hint}</p> : null}
+    </div>
+  )
+}
+
+export function AccessDenied() {
+  return (
+    <div className="relative flex flex-col items-center text-center">
+      <div className="relative mb-14 grid size-28 place-items-center">
+        <span className="access-ring absolute inset-0 rounded-full border border-accent/40" />
+        <span className="access-ring-2 absolute -inset-5 rounded-full border border-accent/25" />
+        <span className="access-ring-3 absolute -inset-10 rounded-full border border-accent/15" />
+        <span className="access-glow absolute inset-0 rounded-full bg-accent/25 blur-2xl" />
+        <span className="relative size-4 rounded-full bg-accent" />
+      </div>
+      <p className="access-fade text-xl tracking-wide text-mute">вы не можете это посмотреть</p>
     </div>
   )
 }

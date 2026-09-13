@@ -223,6 +223,65 @@ body {
   animation: scout-type-caret 0.9s step-end infinite;
 }
 
+@keyframes access-ring {
+  0% {
+    transform: scale(0.86);
+    opacity: 0.55;
+  }
+  70% {
+    opacity: 0.12;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+}
+
+@keyframes access-glow {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.55;
+    transform: scale(1.12);
+  }
+}
+
+@keyframes access-fade {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.access-ring,
+.access-ring-2,
+.access-ring-3 {
+  animation: access-ring 2.4s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+.access-ring-2 {
+  animation-delay: 0.55s;
+}
+
+.access-ring-3 {
+  animation-delay: 1.1s;
+}
+
+.access-glow {
+  animation: access-glow 2.6s ease-in-out infinite;
+}
+
+.access-fade {
+  animation: access-fade 0.7s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pulse-ring,
   .pulse-ring-2,
@@ -238,7 +297,12 @@ body {
   .drift,
   .scout-msg-in,
   .scout-think-dot,
-  .scout-type-caret {
+  .scout-type-caret,
+  .access-ring,
+  .access-ring-2,
+  .access-ring-3,
+  .access-glow,
+  .access-fade {
     animation: none;
   }
 }
