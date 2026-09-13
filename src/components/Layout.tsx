@@ -18,6 +18,8 @@ export function Layout() {
   const nav = isModerator
     ? [
         { to: "/", label: "Обзор", end: true },
+        { to: "/scout", label: "Scout", end: false },
+        { to: "/onepagers", label: "One-pager", end: false },
         { to: "/analytics", label: "Аналитика", end: false },
         { to: "/moderate", label: "Модерация", end: false },
         { to: "/people", label: "Пиры", end: false },
@@ -25,6 +27,8 @@ export function Layout() {
       ]
     : [
         { to: "/", label: "Мой проект", end: true },
+        { to: "/scout", label: "Scout", end: false },
+        { to: "/onepagers", label: "One-pager", end: false },
         { to: "/analytics", label: "Аналитика", end: false },
         { to: "/new", label: "Создать", end: false },
         { to: "/people", label: "Пиры", end: false },

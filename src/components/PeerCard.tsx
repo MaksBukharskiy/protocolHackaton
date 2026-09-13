@@ -1,36 +1,25 @@
 import { Link } from "react-router-dom"
 import { LOOKING_LABEL, ROLE_LABEL } from "../lib/labels"
 import type { Peer } from "../types"
-import { Avatar, Chip } from "./ui"
+import { Avatar } from "./ui"
 
 export function PeerCard({ peer }: { peer: Peer }) {
+  const roles = peer.roles.map((role) => ROLE_LABEL[role]).join(" · ")
   return (
     <Link
       to={`/peer/${peer.id}`}
-      className="block rounded-2xl border border-line bg-panel p-5 transition hover:border-accent/70"
+      className="flex items-center gap-3 border-b border-line py-3 transition hover:text-accent"
     >
-      <div className="flex items-start gap-3">
-        <Avatar id={peer.id} nickname={peer.nickname} />
-        <div className="min-w-0">
-          <p className="text-sm text-accent">{peer.nickname}</p>
-          <p className="truncate text-lg font-semibold">{peer.name}</p>
-          <p className="mt-1 text-[11px] text-mute">
-            {peer.campus} · {peer.cohort}
-          </p>
-        </div>
+      <Avatar id={peer.id} nickname={peer.nickname} size="sm" />
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">
+          {peer.nickname}
+          <span className="ml-2 font-normal text-mute">{peer.name}</span>
+        </p>
+        <p className="truncate text-xs text-mute">{roles || "—"}</p>
       </div>
-      <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-mute">{peer.bio}</p>
-      <div className="mt-4 flex flex-wrap gap-1.5">
-        {peer.roles.map((role) => (
-          <Chip key={role} active>
-            {ROLE_LABEL[role]}
-          </Chip>
-        ))}
-        {peer.skills.slice(0, 3).map((skill) => (
-          <Chip key={skill}>{skill}</Chip>
-        ))}
-      </div>
-      <p className="mt-4 text-[11px] uppercase tracking-wider text-mute">{LOOKING_LABEL[peer.lookingFor]}</p>
+      <p className="hidden shrink-0 text-xs text-mute sm:block">{peer.campus}</p>
+      <p className="shrink-0 text-[11px] text-mute">{LOOKING_LABEL[peer.lookingFor]}</p>
     </Link>
   )
 }

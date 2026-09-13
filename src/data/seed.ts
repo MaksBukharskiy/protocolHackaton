@@ -2,9 +2,21 @@ import { emptyAnswers, fillModule } from "../lib/modules"
 import type { Peer, Project } from "../types"
 
 export const STORAGE_KEY = "launchlab21"
-export const STORAGE_VERSION = 6
+export const STORAGE_VERSION = 7
 
 export const peers: Peer[] = [
+  {
+    id: "labmod",
+    nickname: "labmod",
+    name: "Модератор Лаб",
+    campus: "Ташкент",
+    cohort: "Launch Lab 21",
+    bio: "Сотрудник инкубатора. Смотрит прогресс команд и one-pager.",
+    skills: ["Модерация", "Менторство"],
+    roles: ["biz"],
+    lookingFor: "none",
+    accessRole: "moderator",
+  },
   {
     id: "stockcol",
     nickname: "stockcol",
@@ -15,6 +27,7 @@ export const peers: Peer[] = [
     skills: ["React", "TypeScript", "Vite", "Figma"],
     roles: ["frontend"],
     lookingFor: "cofounder",
+    accessRole: "participant",
   },
   {
     id: "nilufer",
@@ -26,6 +39,7 @@ export const peers: Peer[] = [
     skills: ["UI", "UX", "Figma", "Прототипы"],
     roles: ["design", "frontend"],
     lookingFor: "teammate",
+    accessRole: "participant",
   },
   {
     id: "bekzodj",
@@ -37,6 +51,7 @@ export const peers: Peer[] = [
     skills: ["Go", "PostgreSQL", "Docker", "REST"],
     roles: ["backend"],
     lookingFor: "teammate",
+    accessRole: "participant",
   },
   {
     id: "madinaml",
@@ -48,6 +63,7 @@ export const peers: Peer[] = [
     skills: ["Python", "PyTorch", "NLP", "Pandas"],
     roles: ["ml"],
     lookingFor: "teammate",
+    accessRole: "participant",
   },
   {
     id: "jasurmob",
@@ -59,6 +75,7 @@ export const peers: Peer[] = [
     skills: ["Flutter", "Dart", "Firebase"],
     roles: ["mobile"],
     lookingFor: "teammate",
+    accessRole: "participant",
   },
   {
     id: "dilnoza",
@@ -70,6 +87,7 @@ export const peers: Peer[] = [
     skills: ["Питчи", "JTBD", "CustDev", "Презентации"],
     roles: ["biz"],
     lookingFor: "cofounder",
+    accessRole: "participant",
   },
   {
     id: "umarfull",
@@ -81,6 +99,7 @@ export const peers: Peer[] = [
     skills: ["Node", "React", "Postgres", "CI"],
     roles: ["backend", "frontend"],
     lookingFor: "none",
+    accessRole: "participant",
   },
   {
     id: "sarvinoz",
@@ -92,6 +111,7 @@ export const peers: Peer[] = [
     skills: ["HTML", "CSS", "JavaScript", "React"],
     roles: ["frontend"],
     lookingFor: "teammate",
+    accessRole: "participant",
   },
   {
     id: "lazizdev",
@@ -103,6 +123,7 @@ export const peers: Peer[] = [
     skills: ["Linux", "Docker", "Nginx", "Bash"],
     roles: ["backend"],
     lookingFor: "teammate",
+    accessRole: "participant",
   },
   {
     id: "sevinch",
@@ -114,6 +135,7 @@ export const peers: Peer[] = [
     skills: ["Product", "SQL", "Метрики", "Интервью"],
     roles: ["biz", "backend"],
     lookingFor: "none",
+    accessRole: "participant",
   },
   {
     id: "oybekcv",
@@ -125,6 +147,7 @@ export const peers: Peer[] = [
     skills: ["CV", "Python", "FastAPI", "OpenCV"],
     roles: ["ml"],
     lookingFor: "cofounder",
+    accessRole: "participant",
   },
   {
     id: "gulruh",
@@ -136,6 +159,7 @@ export const peers: Peer[] = [
     skills: ["Дизайн-системы", "Figma", "Исследования"],
     roles: ["design"],
     lookingFor: "teammate",
+    accessRole: "participant",
   },
 ]
 

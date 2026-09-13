@@ -1,9 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
 import { Brand, Mark } from "../components/Logo"
-import { ACCESS_LABEL } from "../lib/labels"
 import { useStore } from "../store"
-import { ACCESS_ROLES, type AccessRole } from "../types"
 
 type Mode = "login" | "register"
 
@@ -14,7 +12,6 @@ export function LoginPage() {
   const { login, logout, verify, register, resetDemo } = useStore()
   const navigate = useNavigate()
   const [mode, setMode] = useState<Mode>("login")
-  const [role, setRole] = useState<AccessRole>("participant")
   const [nickname, setNickname] = useState("")
   const [name, setName] = useState("")
   const [campus, setCampus] = useState("Москва")
@@ -37,7 +34,7 @@ export function LoginPage() {
         setError("Неверный логин или пароль")
         return
       }
-      login(peer.id, role)
+      login(peer.id)
       navigate("/", { replace: true })
       return
     }
@@ -58,7 +55,7 @@ export function LoginPage() {
       setError("Пароли не совпадают")
       return
     }
-    const id = register({ nickname, name, campus, password, role })
+    const id = register({ nickname, name, campus, password })
     if (!id) {
       setError("Логин занят")
       return
@@ -70,7 +67,7 @@ export function LoginPage() {
     <div className="grid min-h-dvh lg:grid-cols-[calc(50%-150px)_1fr]">
       <section className="relative hidden overflow-hidden bg-accent lg:block">
         <div
-          className="absolute inset-0 opacity-12"
+            className="absolute inset-0 opacity-12"
           style={{
             backgroundImage:
               "linear-gradient(#0a0a0a 1px, transparent 1px), linear-gradient(90deg, #0a0a0a 1px, transparent 1px)",
@@ -130,19 +127,6 @@ export function LoginPage() {
             ))}
           </div>
 
-          <div className="mt-4 grid grid-cols-2 rounded-full bg-ink p-1">
-            {ACCESS_ROLES.map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => setRole(item)}
-                className={`rounded-full py-2 text-sm ${role === item ? "bg-accent text-ink" : "text-mute"}`}
-              >
-                {ACCESS_LABEL[item]}
-              </button>
-            ))}
-          </div>
-
           <form onSubmit={onSubmit} className="mt-6 space-y-3">
             {mode === "register" ? (
               <>
@@ -189,8 +173,10 @@ export function LoginPage() {
           </form>
 
           <p className="mt-5 text-center text-xs text-mute">
-            <button type="button" onClick={resetDemo} className="hover:text-white">
-              сброс · rwood / 21
+            участник: stockcol / 21 · модератор: labmod / 21
+            <br />
+            <button type="button" onClick={resetDemo} className="mt-1 hover:text-white">
+              сброс демо
             </button>
           </p>
         </div>

@@ -177,6 +177,52 @@ body {
   animation: drift 9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
+@keyframes scout-msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scout-think-dot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
+@keyframes scout-type-caret {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+.scout-msg-in {
+  animation: scout-msg-in 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.scout-think-dot {
+  animation: scout-think-dot 1.2s ease-in-out infinite;
+}
+
+.scout-type-caret {
+  animation: scout-type-caret 0.9s step-end infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pulse-ring,
   .pulse-ring-2,
@@ -189,7 +235,10 @@ body {
   .logo-pulse,
   .mark-pulse,
   .glow-breathe,
-  .drift {
+  .drift,
+  .scout-msg-in,
+  .scout-think-dot,
+  .scout-type-caret {
     animation: none;
   }
 }

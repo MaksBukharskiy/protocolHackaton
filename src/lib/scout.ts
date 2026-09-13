@@ -8,6 +8,7 @@ type Ctx = {
   peers: Peer[]
   projects: Project[]
   me: Peer
+  isModerator?: boolean
 }
 
 const ROLE_HINTS: Record<Role, string[]> = {
@@ -59,9 +60,8 @@ function projectLine(project: Project) {
 }
 
 export function greeting(ctx: Ctx): ScoutAnswer {
-  const top = countNeeded(ctx.projects)[0]
   return {
-    text: `Привет, ${ctx.me.nickname}. Я Scout — смотрю доску protocol: пиров, проекты и открытые слоты.\n\nСейчас чаще всего ищут ${ROLE_LABEL[top.role]} (${top.count} проектов). Спроси, кого подобрать или где нужен твой стек.`,
+    text: `Привет, ${ctx.me.nickname}.`,
     links: [],
   }
 }

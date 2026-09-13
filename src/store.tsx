@@ -16,14 +16,13 @@ type Store = {
   isModerator: boolean
   peers: Peer[]
   projects: Project[]
-  login: (peerId: string, role: AccessRole) => void
+  login: (peerId: string) => void
   verify: (nickname: string, password: string) => Peer | undefined
   register: (input: {
     nickname: string
     name: string
     campus: string
     password: string
-    role: AccessRole
   }) => string
   logout: () => void
   updatePeer: (peerId: string, patch: Partial<Peer>) => void
@@ -55,7 +54,17 @@ function loadState(): AppState {
     if (!raw) return emptyState()
     const parsed = JSON.parse(raw) as AppState
     if (parsed.version !== STORAGE_VERSION) return emptyState()
-    return parsed
+    return {
+      ...parsed,
+      peers: parsed.peers.map((peer) => ({
+        ...peer,
+        accessRole: peer.accessRole === "moderator" ? "moderator" : "participant",
+      })),
+      passwords: {
+        ...Object.fromEntries(seedPeers.map((peer) => [peer.id, "21"])),
+        ...parsed.passwords,
+      },
+    }
   } catch {
     return emptyState()
   }
@@ -75,7 +84,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Store>(() => {
     const currentUser = state.peers.find((p) => p.id === state.currentUserId) ?? null
-    const currentRole = currentUser ? state.currentRole : null
+    const currentRole = currentUser?.accessRole ?? null
     const isModerator = currentRole === "moderator"
 
     return {
@@ -85,7 +94,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       peers: state.peers,
       projects: state.projects,
       peerById: (id) => state.peers.find((p) => p.id === id),
-      login: (peerId, role) => commit({ ...state, currentUserId: peerId, currentRole: role }),
+      login: (peerId) => {
+        const peer = state.peers.find((item) => item.id === peerId)
+        if (!peer) return
+        commit({ ...state, currentUserId: peerId, currentRole: peer.accessRole })
+      },
       verify: (nickname, password) => {
         const loginName = nickname.trim().toLowerCase()
         const peer = state.peers.find((item) => item.nickname.toLowerCase() === loginName || item.id === loginName)
@@ -107,13 +120,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           skills: [],
           roles: ["frontend"],
           lookingFor: "teammate",
+          accessRole: "participant",
         }
         commit({
           ...state,
           peers: [peer, ...state.peers],
           passwords: { ...state.passwords, [id]: input.password },
           currentUserId: id,
-          currentRole: input.role,
+          currentRole: "participant",
         })
         return id
       },

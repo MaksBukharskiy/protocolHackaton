@@ -17,23 +17,27 @@ export function PeoplePage() {
       if (role !== "all" && !peer.roles.includes(role)) return false
       if (looking !== "all" && peer.lookingFor !== looking) return false
       if (!q) return true
-      const blob = `${peer.nickname} ${peer.name} ${peer.bio} ${peer.skills.join(" ")} ${peer.campus}`.toLowerCase()
+      const blob = `${peer.nickname} ${peer.name} ${peer.skills.join(" ")} ${peer.campus}`.toLowerCase()
       return blob.includes(q)
     })
   }, [looking, peers, query, role])
 
   return (
     <div>
-      <p className="text-xs uppercase tracking-[0.2em] text-mute">пиры</p>
-      <h1 className="mt-1 text-3xl font-semibold tracking-tight">Кто есть в кампусе</h1>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <h1 className="text-3xl font-semibold tracking-tight">Пиры</h1>
+        <p className="text-xs text-mute">{filtered.length}</p>
+      </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value as Role | "all")}
-          className={selectClass()}
-        >
-          <option value="all">любой навык</option>
+      <div className="mt-6 flex flex-wrap gap-2 border-b border-line pb-4">
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="поиск"
+          className="min-w-40 flex-1 rounded-lg border border-line bg-ink px-3 py-1.5 text-xs outline-none focus:border-accent"
+        />
+        <select value={role} onChange={(e) => setRole(e.target.value as Role | "all")} className={selectClass()}>
+          <option value="all">роль</option>
           {ROLES.map((item) => (
             <option key={item} value={item}>
               {ROLE_LABEL[item]}
@@ -45,27 +49,21 @@ export function PeoplePage() {
           onChange={(e) => setLooking(e.target.value as LookingFor | "all")}
           className={selectClass()}
         >
-          <option value="all">любое намерение</option>
+          <option value="all">статус</option>
           {LOOKING_FOR.map((item) => (
             <option key={item} value={item}>
               {LOOKING_LABEL[item]}
             </option>
           ))}
         </select>
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="ник, навык, кампус"
-          className="min-w-48 flex-1 rounded-lg border border-line bg-panel px-3 py-1.5 text-xs outline-none focus:border-accent"
-        />
       </div>
 
       {filtered.length === 0 ? (
         <div className="mt-8">
-          <Empty title="Пиры не нашлись" hint="Попробуй другой навык — в сидах есть ML, дизайн и бэкенд." />
+          <Empty title="Пусто" hint="Другой фильтр." />
         </div>
       ) : (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-2">
           {filtered.map((peer) => (
             <PeerCard key={peer.id} peer={peer} />
           ))}

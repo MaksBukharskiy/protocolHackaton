@@ -28,6 +28,7 @@ export type Peer = {
   skills: string[]
   roles: Role[]
   lookingFor: LookingFor
+  accessRole: AccessRole
 }
 
 export const MODULE_IDS = ["problem", "audience", "solution", "wedge", "ask", "next"] as const
