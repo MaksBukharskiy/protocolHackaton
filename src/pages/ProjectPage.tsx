@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
+import { BadgeRow } from "../components/Badge"
 import {
   ApplicationStatusChip,
   Avatar,
@@ -10,6 +11,7 @@ import {
   ModerationStatusChip,
 } from "../components/ui"
 import { applicationForPeer, pendingApplications } from "../lib/applications"
+import { badgesFor, isBadgeEarned } from "../lib/badges"
 import { ROLE_LABEL, STATUS_LABEL } from "../lib/labels"
 import {
   canAccessProject,
@@ -268,6 +270,16 @@ export function ProjectPage() {
           </Link>
         </div>
       </div>
+
+      <section className="mt-6 rounded-2xl border border-line bg-panel p-5">
+        <p className="mb-4 text-xs uppercase tracking-wider text-mute">бейджи модулей</p>
+        <BadgeRow
+          badges={badgesFor(modules).map((badge) => ({
+            badge,
+            earned: isBadgeEarned(board, badge.id, modules),
+          }))}
+        />
+      </section>
 
       {fullAccess && isModerator && !isMember ? (
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel px-4 py-3">

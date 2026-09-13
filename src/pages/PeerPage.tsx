@@ -1,18 +1,22 @@
 import { Link, useParams } from "react-router-dom"
 import { ProjectCard } from "../components/ProjectCard"
 import { Avatar, Chip, Empty } from "../components/ui"
+import { BadgeRow } from "../components/Badge"
+import { badgesFor, isBadgeEarned } from "../lib/badges"
 import { LOOKING_LABEL, ROLE_LABEL } from "../lib/labels"
+import { canAccessProject } from "../lib/modules"
 import { useStore } from "../store"
 
 export function PeerPage() {
   const { id } = useParams()
-  const { peers, projects, currentUser } = useStore()
+  const { peers, projects, currentUser, isModerator, modules } = useStore()
   const peer = peers.find((item) => item.id === id)
 
   if (!peer) return <Empty title="Пир не найден" />
 
-  const owned = projects.filter((project) => project.ownerId === peer.id)
-  const joined = projects.filter(
+  const visible = projects.filter((project) => canAccessProject(project, currentUser?.id, isModerator))
+  const owned = visible.filter((project) => project.ownerId === peer.id)
+  const joined = visible.filter(
     (project) => project.memberIds.includes(peer.id) && project.ownerId !== peer.id,
   )
   const all = [...owned, ...joined]
@@ -81,6 +85,18 @@ export function PeerPage() {
           </div>
         </section>
       </div>
+
+      {owned.length + joined.length > 0 ? (
+        <section className="mt-3 rounded-2xl border border-line bg-panel p-5">
+          <p className="mb-4 text-[11px] uppercase tracking-wider text-mute">бейджи</p>
+          <BadgeRow
+            badges={badgesFor(modules).map((badge) => ({
+              badge,
+              earned: [...owned, ...joined].some((project) => isBadgeEarned(project, badge.id, modules)),
+            }))}
+          />
+        </section>
+      ) : null}
 
       <section className="mt-3 rounded-2xl border border-line bg-panel p-5">
         <p className="text-[11px] uppercase tracking-wider text-mute">проекты</p>

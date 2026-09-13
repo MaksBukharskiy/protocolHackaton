@@ -2,16 +2,15 @@ import { Link } from "react-router-dom"
 import { ProjectCard } from "../components/ProjectCard"
 import { ApplicationStatusChip, Empty, ModerationStatusChip } from "../components/ui"
 import { myApplications } from "../lib/applications"
-import { isPubliclyListed, doneCount } from "../lib/modules"
+import { earnedBadges } from "../lib/badges"
+import { canAccessProject, doneCount, isPubliclyListed } from "../lib/modules"
 import { useStore } from "../store"
 
 export function FeedPage() {
   const { projects, currentUser, isModerator, modules } = useStore()
   if (!currentUser) return null
 
-  const mine = isModerator
-    ? projects
-    : projects.filter((project) => project.memberIds.includes(currentUser.id) || project.ownerId === currentUser.id)
+  const mine = projects.filter((project) => canAccessProject(project, currentUser.id, isModerator))
 
   const openRoles = isModerator
     ? []
@@ -30,7 +29,7 @@ export function FeedPage() {
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">{isModerator ? "Команды" : "Мой проект"}</h1>
           {!isModerator ? (
-            <p className="mt-1 text-sm text-mute">Модули, one-pager и набор в команду.</p>
+            <p className="mt-1 text-sm text-mute">Свои модули, заявки в команду и набор.</p>
           ) : null}
         </div>
         <Link
@@ -52,7 +51,8 @@ export function FeedPage() {
               <ProjectCard project={project} />
               <div className="mt-2 flex flex-wrap items-center gap-2 px-1">
                 <p className="text-xs text-mute">
-                  модули {doneCount(project, modules)}/{modules.length}
+                  модули {doneCount(project, modules)}/{modules.length} · бейджи{" "}
+                  {earnedBadges(project, modules).length}
                 </p>
                 {!isModerator ? <ModerationStatusChip status={project.moderationStatus} /> : null}
               </div>
