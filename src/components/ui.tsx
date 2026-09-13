@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from "react"
+import { APPLICATION_STATUS_LABEL, MODERATION_STATUS_LABEL, STATUS_LABEL } from "../lib/labels"
+import type { ApplicationStatus, ModerationStatus, ProjectStatus } from "../types"
 
 const AVATAR_TONES = ["#1ecb5c", "#16a34a", "#4ade80", "#15803d", "#86efac"]
 
@@ -34,13 +36,27 @@ export function Avatar({ id, nickname, size = "md" }: { id: string; nickname: st
 export function Chip({ children, active = false }: { children: ReactNode; active?: boolean }) {
   return (
     <span
-      className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] tracking-wide ${
-        active ? "bg-accent text-ink" : "bg-white/5 text-mute"
+      className={`inline-flex shrink-0 items-center rounded px-2.5 py-1 text-[11px] font-medium leading-none tracking-wide ${
+        active
+          ? "bg-accent text-ink"
+          : "border border-white/12 bg-white/[0.05] text-mute"
       }`}
     >
       {children}
     </span>
   )
+}
+
+export function StatusChip({ status }: { status: ProjectStatus }) {
+  return <Chip active={status === "looking"}>{STATUS_LABEL[status]}</Chip>
+}
+
+export function ApplicationStatusChip({ status }: { status: ApplicationStatus }) {
+  return <Chip active={status === "accepted"}>{APPLICATION_STATUS_LABEL[status]}</Chip>
+}
+
+export function ModerationStatusChip({ status }: { status: ModerationStatus }) {
+  return <Chip active={status === "approved"}>{MODERATION_STATUS_LABEL[status]}</Chip>
 }
 
 export function Empty({ title, hint }: { title: string; hint?: string }) {

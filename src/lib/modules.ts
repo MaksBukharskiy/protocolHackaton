@@ -169,9 +169,13 @@ export function canAccessProject(project: Project, userId: string | undefined, i
   return project.memberIds.includes(userId) || project.ownerId === userId
 }
 
-/** Публичный просмотр для заявки в команду (без ответов модулей). */
+/** Публичный просмотр: только одобренные проекты со статусом «ищем в команду». */
 export function canPreviewProject(project: Project, userId: string | undefined, isModerator: boolean) {
   if (canAccessProject(project, userId, isModerator)) return true
   if (!userId) return false
-  return project.status === "looking"
+  return project.moderationStatus === "approved" && project.status === "looking"
+}
+
+export function isPubliclyListed(project: Project) {
+  return project.moderationStatus === "approved" && project.status === "looking"
 }

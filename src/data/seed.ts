@@ -1,8 +1,22 @@
 import { emptyAnswers, fillModule } from "../lib/modules"
-import type { Peer, Project } from "../types"
+import type { JoinApplication, Peer, Project } from "../types"
 
 export const STORAGE_KEY = "launchlab21"
-export const STORAGE_VERSION = 9
+export const STORAGE_VERSION = 11
+
+function app(
+  partial: Omit<JoinApplication, "id"> & { id?: string },
+): JoinApplication {
+  return {
+    id: partial.id ?? `app-${partial.peerId}-${partial.createdAt.slice(0, 10)}`,
+    peerId: partial.peerId,
+    message: partial.message,
+    status: partial.status,
+    decisionNote: partial.decisionNote,
+    createdAt: partial.createdAt,
+    decidedAt: partial.decidedAt,
+  }
+}
 
 export const peers: Peer[] = [
   {
@@ -174,7 +188,16 @@ export const projects: Project[] = [
     stack: ["React", "Python", "Postgres"],
     neededRoles: ["frontend", "ml"],
     memberIds: ["dilnoza", "madinaml"],
-    interestIds: ["sarvinoz"],
+    moderationStatus: "approved",
+    applications: [
+      app({
+        id: "app-intramatch-sarvinoz",
+        peerId: "sarvinoz",
+        message: "Закрою карточку слота и фильтры на React. Уже делала похожий UI в Intra.",
+        status: "pending",
+        createdAt: "2026-09-12T11:20:00.000Z",
+      }),
+    ],
     pagerNote: "Ищем фронтенд до демо-дня Launch Lab 21.",
     comments: [
       {
@@ -182,12 +205,6 @@ export const projects: Project[] = [
         authorId: "labmod",
         text: "Сильный wedge. До демо-дня зафиксируйте метрику «3 команды» в one-pager — без неё ask звучит абстрактно.",
         createdAt: "2026-09-10T10:15:00.000Z",
-      },
-      {
-        id: "c-intramatch-2",
-        authorId: "labmod",
-        text: "По заявке sarvinoz: фронт закрывает слот. Примите или уточните стек в ask.",
-        createdAt: "2026-09-12T14:40:00.000Z",
       },
     ],
     answers: {
@@ -233,7 +250,18 @@ export const projects: Project[] = [
     stack: ["TypeScript", "Vite"],
     neededRoles: ["design", "biz"],
     memberIds: ["stockcol"],
-    interestIds: ["nilufer"],
+    moderationStatus: "approved",
+    applications: [
+      app({
+        id: "app-peercv-nilufer",
+        peerId: "nilufer",
+        message: "Соберу UI-кит карточки навыков и прототип экрана резюме в Figma.",
+        status: "rejected",
+        decisionNote: "Пока закрываем дизайн сами. Вернёмся к набору после демо.",
+        createdAt: "2026-09-08T09:00:00.000Z",
+        decidedAt: "2026-09-09T16:30:00.000Z",
+      }),
+    ],
     pagerNote: "",
     comments: [],
     answers: {
@@ -260,7 +288,8 @@ export const projects: Project[] = [
     stack: ["Go", "React", "Redis"],
     neededRoles: ["frontend", "design"],
     memberIds: ["bekzodj", "umarfull"],
-    interestIds: [],
+    moderationStatus: "approved",
+    applications: [],
     pagerNote: "",
     comments: [],
     answers: {
@@ -282,7 +311,8 @@ export const projects: Project[] = [
     stack: ["Figma", "Next.js"],
     neededRoles: ["frontend", "backend"],
     memberIds: ["gulruh"],
-    interestIds: [],
+    moderationStatus: "pending",
+    applications: [],
     pagerNote: "",
     comments: [],
     answers: emptyAnswers(),
@@ -296,8 +326,19 @@ export const projects: Project[] = [
     status: "building",
     stack: ["Node", "React", "SQL"],
     neededRoles: ["mobile", "design"],
-    memberIds: ["sevinch", "lazizdev"],
-    interestIds: ["jasurmob"],
+    memberIds: ["sevinch", "lazizdev", "jasurmob"],
+    moderationStatus: "approved",
+    applications: [
+      app({
+        id: "app-jobs21-jasurmob",
+        peerId: "jasurmob",
+        message: "Сделаю мобильный клиент на Flutter под доску офферов.",
+        status: "accepted",
+        decisionNote: "Бери мобильный слот — ждём первый экран к концу недели.",
+        createdAt: "2026-09-07T12:00:00.000Z",
+        decidedAt: "2026-09-08T10:15:00.000Z",
+      }),
+    ],
     pagerNote: "",
     comments: [],
     answers: {
@@ -329,7 +370,8 @@ export const projects: Project[] = [
     stack: ["Flutter", "Firebase"],
     neededRoles: ["backend", "design"],
     memberIds: ["jasurmob"],
-    interestIds: [],
+    moderationStatus: "pending",
+    applications: [],
     pagerNote: "",
     comments: [],
     answers: emptyAnswers(),
@@ -344,7 +386,16 @@ export const projects: Project[] = [
     stack: ["Python", "FastAPI", "React"],
     neededRoles: ["frontend", "biz"],
     memberIds: ["oybekcv"],
-    interestIds: ["stockcol"],
+    moderationStatus: "approved",
+    applications: [
+      app({
+        id: "app-mentora-stockcol",
+        peerId: "stockcol",
+        message: "Могу закрыть фронт карточки слота и онбординг на React.",
+        status: "pending",
+        createdAt: "2026-09-11T18:45:00.000Z",
+      }),
+    ],
     pagerNote: "Нужен фронтенд и упаковка онбординга.",
     comments: [
       {
@@ -397,7 +448,8 @@ export const projects: Project[] = [
     stack: ["Go", "Linux", "HTMX"],
     neededRoles: ["frontend"],
     memberIds: ["lazizdev"],
-    interestIds: [],
+    moderationStatus: "approved",
+    applications: [],
     pagerNote: "",
     comments: [],
     answers: emptyAnswers(),

@@ -46,7 +46,10 @@ export function AnalyticsPage() {
   const filledModules = scope.reduce((sum, p) => sum + doneCount(p, modules), 0)
   const maxModules = scope.length * modules.length || 1
   const complete = scope.filter((p) => isComplete(p, modules)).length
-  const interests = scope.reduce((sum, p) => sum + p.interestIds.length, 0)
+  const interests = scope.reduce(
+    (sum, p) => sum + (p.applications ?? []).filter((a) => a.status === "pending").length,
+    0,
+  )
   const openPeers = peers.filter((p) => p.lookingFor !== "none").length
   const avgProgress = Math.round((filledModules / maxModules) * 100)
 

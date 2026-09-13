@@ -57,6 +57,24 @@ export type ProjectComment = {
   createdAt: string
 }
 
+export const APPLICATION_STATUSES = ["pending", "accepted", "rejected"] as const
+export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number]
+
+/** Заявка в команду: пир пишет комментарий, владелец принимает/отклоняет со своим. */
+export type JoinApplication = {
+  id: string
+  peerId: string
+  message: string
+  status: ApplicationStatus
+  decisionNote?: string
+  createdAt: string
+  decidedAt?: string
+}
+
+/** Публикация на доске: модератор одобряет проект, не состав команды. */
+export const MODERATION_STATUSES = ["pending", "approved", "rejected"] as const
+export type ModerationStatus = (typeof MODERATION_STATUSES)[number]
+
 export type Project = {
   id: string
   ownerId: string
@@ -67,7 +85,10 @@ export type Project = {
   stack: string[]
   neededRoles: Role[]
   memberIds: string[]
-  interestIds: string[]
+  applications: JoinApplication[]
+  moderationStatus: ModerationStatus
+  moderationNote?: string
+  moderatedAt?: string
   answers: Record<string, Record<string, string>>
   pagerNote: string
   comments: ProjectComment[]

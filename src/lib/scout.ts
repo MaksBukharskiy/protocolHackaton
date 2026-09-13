@@ -84,17 +84,26 @@ export function askScout(raw: string, ctx: Ctx): ScoutAnswer {
     }
   }
 
-  if (/(мо[йи]|отклик|интерес)/.test(q)) {
-    const mine = ctx.projects.filter((project) => project.interestIds.includes(ctx.me.id))
+  if (/(мо[йи]|отклик|интерес|заявк)/.test(q)) {
+    const mine = ctx.projects.filter((project) =>
+      (project.applications ?? []).some((item) => item.peerId === ctx.me.id),
+    )
     const owned = ctx.projects.filter((project) => project.ownerId === ctx.me.id)
     if (mine.length === 0 && owned.length === 0) {
       return {
-        text: "Откликов пока нет. Открой Mentora или IntraMatch и нажми «Хочу в команду» — я сразу это увижу.",
+        text: "Заявок пока нет. Открой Mentora или IntraMatch и подай заявку в команду — я сразу это увижу.",
         links: [],
       }
     }
     const lines = [
-      mine.length ? `Твои отклики:\n${mine.map((p, i) => `${i + 1}. ${p.title}`).join("\n")}` : "",
+      mine.length
+        ? `Твои заявки в команду:\n${mine
+            .map((p, i) => {
+              const app = (p.applications ?? []).find((item) => item.peerId === ctx.me.id)
+              return `${i + 1}. ${p.title}${app ? ` (${app.status})` : ""}`
+            })
+            .join("\n")}`
+        : "",
       owned.length ? `Твои проекты:\n${owned.map((p, i) => `${i + 1}. ${p.title}`).join("\n")}` : "",
     ].filter(Boolean)
     return {
@@ -138,7 +147,7 @@ export function askScout(raw: string, ctx: Ctx): ScoutAnswer {
   if (namedProject) {
     const owner = ctx.peers.find((p) => p.id === namedProject.ownerId)
     return {
-      text: `${namedProject.title}: ${namedProject.pitch}\nВладелец — ${owner?.nickname ?? "неизвестен"}. В команде ${namedProject.memberIds.length}, откликов ${namedProject.interestIds.length}. Ищем: ${namedProject.neededRoles.map((r) => ROLE_LABEL[r]).join(", ") || "никого"}.`,
+      text: `${namedProject.title}: ${namedProject.pitch}\nВладелец — ${owner?.nickname ?? "неизвестен"}. В команде ${namedProject.memberIds.length}, заявок в ожидании ${(namedProject.applications ?? []).filter((a) => a.status === "pending").length}. Ищем: ${namedProject.neededRoles.map((r) => ROLE_LABEL[r]).join(", ") || "никого"}.`,
       links: [{ kind: "project", id: namedProject.id, label: namedProject.title }],
     }
   }
@@ -188,7 +197,7 @@ export function askScout(raw: string, ctx: Ctx): ScoutAnswer {
   }
 
   if (/(кого ищ|слот|ваканс|открыт.*проект|ищем команду)/.test(q)) {
-    const looking = ctx.projects.filter((p) => p.status === "looking")
+    const looking = ctx.projects.filter((p) => p.moderationStatus === "approved" && p.status === "looking")
     return {
       text: `Проекты, которым нужна команда:\n${looking
         .map((p, i) => `${i + 1}. ${projectLine(p)}`)
@@ -212,7 +221,7 @@ export function askScout(raw: string, ctx: Ctx): ScoutAnswer {
   }
 
   if (/(сколько|стат|обзор|сводк)/.test(q)) {
-    const looking = ctx.projects.filter((p) => p.status === "looking").length
+    const looking = ctx.projects.filter((p) => p.moderationStatus === "approved" && p.status === "looking").length
     const open = ctx.peers.filter((p) => p.lookingFor !== "none").length
     return {
       text: `На доске ${ctx.projects.length} проектов, ${ctx.peers.length} пиров. Ищут команду: ${looking}. Открыты к сборке: ${open}.`,
@@ -242,9 +251,12 @@ export function scoutStats(ctx: Ctx) {
   const needed = countNeeded(ctx.projects)
   return {
     topRole: needed[0],
-    looking: ctx.projects.filter((p) => p.status === "looking").length,
+    looking: ctx.projects.filter((p) => p.moderationStatus === "approved" && p.status === "looking").length,
     openPeers: ctx.peers.filter((p) => p.lookingFor !== "none").length,
     projects: ctx.projects.length,
-    interests: ctx.projects.reduce((sum, p) => sum + p.interestIds.length, 0),
+    interests: ctx.projects.reduce(
+      (sum, p) => sum + (p.applications ?? []).filter((a) => a.status === "pending").length,
+      0,
+    ),
   }
 }

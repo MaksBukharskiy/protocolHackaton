@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom"
-import { ROLE_LABEL, STATUS_LABEL } from "../lib/labels"
+import { ROLE_LABEL } from "../lib/labels"
 import { doneCount } from "../lib/modules"
 import { useStore } from "../store"
 import type { Project } from "../types"
-import { Avatar, Chip } from "./ui"
+import { Avatar, Chip, StatusChip } from "./ui"
 
 export function ProjectCard({ project }: { project: Project }) {
   const { peerById, modules } = useStore()
@@ -21,7 +21,7 @@ export function ProjectCard({ project }: { project: Project }) {
           <h3 className="text-xl font-semibold tracking-tight">{project.title}</h3>
           <p className="mt-2 text-sm leading-relaxed text-mute">{project.pitch}</p>
         </div>
-        <Chip active={project.status === "looking"}>{STATUS_LABEL[project.status]}</Chip>
+        <StatusChip status={project.status} />
       </div>
       <div className="mt-4 flex flex-wrap gap-1.5">
         {project.stack.map((item) => (

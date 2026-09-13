@@ -120,9 +120,12 @@ export function NewProjectPage() {
         </div>
       </div>
 
-      <button type="submit" className="mt-8 rounded-full bg-accent px-5 py-2.5 text-sm text-ink">
-        Открыть модуль
+      <button type="submit" className="mt-8 rounded bg-accent px-5 py-2.5 text-sm text-ink">
+        Создать и отправить на проверку
       </button>
+      <p className="mt-3 text-xs text-mute">
+        Новый проект сначала попадает модератору. На публичной доске он появится после публикации.
+      </p>
     </form>
   )
 }

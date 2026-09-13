@@ -7,8 +7,20 @@ import {
   type ReactNode,
 } from "react"
 import { STORAGE_KEY, STORAGE_VERSION, peers as seedPeers, projects as seedProjects } from "./data/seed"
+import { applicationForPeer } from "./lib/applications"
 import { DEFAULT_MODULES, emptyAnswers, emptyFields, slugifyModuleId } from "./lib/modules"
-import type { AccessRole, AppState, ModuleDef, ModuleId, Peer, Project, TemplateField } from "./types"
+import type {
+  AccessRole,
+  AppState,
+  ApplicationStatus,
+  JoinApplication,
+  ModuleDef,
+  ModuleId,
+  ModerationStatus,
+  Peer,
+  Project,
+  TemplateField,
+} from "./types"
 
 type Store = {
   currentUser: Peer | null
@@ -30,7 +42,16 @@ type Store = {
   createProject: (
     input: Omit<
       Project,
-      "id" | "ownerId" | "memberIds" | "interestIds" | "answers" | "pagerNote" | "comments"
+      | "id"
+      | "ownerId"
+      | "memberIds"
+      | "applications"
+      | "moderationStatus"
+      | "moderationNote"
+      | "moderatedAt"
+      | "answers"
+      | "pagerNote"
+      | "comments"
     > & {
       extraMembers?: string[]
     },
@@ -40,9 +61,20 @@ type Store = {
     patch: Partial<Pick<Project, "title" | "teamName" | "pitch" | "pagerNote" | "status" | "neededRoles" | "stack">>,
   ) => void
   saveAnswer: (projectId: string, moduleId: ModuleId, fields: Record<string, string>) => void
-  toggleInterest: (projectId: string) => void
-  acceptMember: (projectId: string, peerId: string) => void
-  rejectInterest: (projectId: string, peerId: string) => void
+  submitApplication: (projectId: string, message: string) => void
+  withdrawApplication: (projectId: string) => void
+  decideApplication: (
+    projectId: string,
+    applicationId: string,
+    decision: Extract<ApplicationStatus, "accepted" | "rejected">,
+    decisionNote?: string,
+  ) => void
+  decideModeration: (
+    projectId: string,
+    decision: Extract<ModerationStatus, "approved" | "rejected">,
+    moderationNote?: string,
+  ) => void
+  resubmitForModeration: (projectId: string) => void
   addComment: (projectId: string, text: string) => void
   addModule: (input: { title: string; hint: string; fields: TemplateField[] }) => string
   deleteModule: (moduleId: ModuleId) => void
@@ -58,6 +90,15 @@ function cloneModules(source: readonly ModuleDef[] = DEFAULT_MODULES): ModuleDef
     ...module,
     fields: module.fields.map((field) => ({ ...field })),
   }))
+}
+
+function normalizeProject(project: Project): Project {
+  return {
+    ...project,
+    applications: Array.isArray(project.applications) ? project.applications : [],
+    comments: Array.isArray(project.comments) ? project.comments : [],
+    moderationStatus: project.moderationStatus ?? "approved",
+  }
 }
 
 function emptyState(): AppState {
@@ -84,10 +125,7 @@ function loadState(): AppState {
         ...peer,
         accessRole: peer.accessRole === "moderator" ? "moderator" : "participant",
       })),
-      projects: parsed.projects.map((project) => ({
-        ...project,
-        comments: Array.isArray(project.comments) ? project.comments : [],
-      })),
+      projects: parsed.projects.map(normalizeProject),
       passwords: {
         ...Object.fromEntries(seedPeers.map((peer) => [peer.id, "21"])),
         ...parsed.passwords,
@@ -183,7 +221,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           id,
           ownerId,
           memberIds: [ownerId, ...extra],
-          interestIds: [],
+          applications: [],
+          moderationStatus: "pending",
           answers: emptyAnswers(modules),
           pagerNote: "",
           comments: [],
@@ -197,7 +236,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...state,
           projects: state.projects.map((project) => {
             if (project.id !== projectId) return project
-            // Только команда правит профиль. Модератор — только смотрит.
             if (!me || (project.ownerId !== me && !project.memberIds.includes(me))) return project
             return { ...project, ...patch }
           }),
@@ -209,7 +247,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           ...state,
           projects: state.projects.map((project) => {
             if (project.id !== projectId) return project
-            // Ответы модулей пишет только команда.
             if (!me || !project.memberIds.includes(me)) return project
             return {
               ...project,
@@ -218,53 +255,107 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }),
         })
       },
-      toggleInterest: (projectId) => {
+      submitApplication: (projectId, message) => {
+        const me = state.currentUserId
+        if (!me) return
+        const trimmed = message.trim()
+        commit({
+          ...state,
+          projects: state.projects.map((project) => {
+            if (project.id !== projectId) return project
+            if (project.ownerId === me || project.memberIds.includes(me)) return project
+            if (project.moderationStatus !== "approved" || project.status !== "looking") return project
+            const existing = applicationForPeer(project, me)
+            if (existing?.status === "pending" || existing?.status === "accepted") return project
+            const next: JoinApplication = {
+              id: crypto.randomUUID(),
+              peerId: me,
+              message: trimmed,
+              status: "pending",
+              createdAt: new Date().toISOString(),
+            }
+            const others = (project.applications ?? []).filter((item) => item.peerId !== me)
+            return { ...project, applications: [...others, next] }
+          }),
+        })
+      },
+      withdrawApplication: (projectId) => {
         const me = state.currentUserId
         if (!me) return
         commit({
           ...state,
           projects: state.projects.map((project) => {
-            if (project.id !== projectId || project.ownerId === me) return project
-            if (project.memberIds.includes(me)) return project
-            const interested = project.interestIds.includes(me)
+            if (project.id !== projectId) return project
             return {
               ...project,
-              interestIds: interested
-                ? project.interestIds.filter((id) => id !== me)
-                : [...project.interestIds, me],
+              applications: (project.applications ?? []).filter(
+                (item) => !(item.peerId === me && item.status === "pending"),
+              ),
             }
           }),
         })
       },
-      acceptMember: (projectId, peerId) => {
+      decideApplication: (projectId, applicationId, decision, decisionNote) => {
         const me = state.currentUserId
-        const moderator = state.currentRole === "moderator"
+        if (!me) return
+        const note = decisionNote?.trim()
+        const decidedAt = new Date().toISOString()
         commit({
           ...state,
           projects: state.projects.map((project) => {
             if (project.id !== projectId) return project
-            if (!moderator && project.ownerId !== me) return project
+            if (project.ownerId !== me) return project
+            const target = (project.applications ?? []).find((item) => item.id === applicationId)
+            if (!target || target.status !== "pending") return project
+            const applications = (project.applications ?? []).map((item) =>
+              item.id === applicationId
+                ? {
+                    ...item,
+                    status: decision,
+                    decisionNote: note || undefined,
+                    decidedAt,
+                  }
+                : item,
+            )
+            const memberIds =
+              decision === "accepted" && !project.memberIds.includes(target.peerId)
+                ? [...project.memberIds, target.peerId]
+                : project.memberIds
+            return { ...project, applications, memberIds }
+          }),
+        })
+      },
+      decideModeration: (projectId, decision, moderationNote) => {
+        if (state.currentRole !== "moderator") return
+        const note = moderationNote?.trim()
+        commit({
+          ...state,
+          projects: state.projects.map((project) => {
+            if (project.id !== projectId) return project
+            if (project.moderationStatus !== "pending") return project
             return {
               ...project,
-              memberIds: project.memberIds.includes(peerId)
-                ? project.memberIds
-                : [...project.memberIds, peerId],
-              interestIds: project.interestIds.filter((id) => id !== peerId),
+              moderationStatus: decision,
+              moderationNote: note || undefined,
+              moderatedAt: new Date().toISOString(),
             }
           }),
         })
       },
-      rejectInterest: (projectId, peerId) => {
+      resubmitForModeration: (projectId) => {
         const me = state.currentUserId
-        const moderator = state.currentRole === "moderator"
+        if (!me) return
         commit({
           ...state,
           projects: state.projects.map((project) => {
             if (project.id !== projectId) return project
-            if (!moderator && project.ownerId !== me) return project
+            if (project.ownerId !== me && !project.memberIds.includes(me)) return project
+            if (project.moderationStatus !== "rejected") return project
             return {
               ...project,
-              interestIds: project.interestIds.filter((id) => id !== peerId),
+              moderationStatus: "pending",
+              moderationNote: undefined,
+              moderatedAt: undefined,
             }
           }),
         })

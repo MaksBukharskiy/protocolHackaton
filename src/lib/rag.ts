@@ -52,7 +52,7 @@ export function buildCorpus(ctx: RagCtx): RagChunk[] {
     id: "meta-board",
     kind: "meta",
     text: `На доске protocol ${ctx.projects.length} проектов и ${ctx.peers.length} пиров. Ищут команду: ${
-      ctx.projects.filter((p) => p.status === "looking").length
+      ctx.projects.filter((p) => p.moderationStatus === "approved" && p.status === "looking").length
     }. Открыты к сборке: ${ctx.peers.filter((p) => p.lookingFor !== "none").length}.`,
     tokens: uniqueTokens("доска статистика проекты пиры слоты команда"),
   })

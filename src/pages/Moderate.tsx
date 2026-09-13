@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react"
 import { Link, Navigate } from "react-router-dom"
-import { Avatar, FieldLabel, inputClass } from "../components/ui"
+import { FieldLabel, inputClass, ModerationStatusChip } from "../components/ui"
+import { pendingApplications } from "../lib/applications"
+import { MODERATION_STATUS_LABEL, STATUS_LABEL } from "../lib/labels"
 import {
   currentModuleId,
   doneCount,
@@ -20,8 +22,7 @@ export function ModeratePage() {
     isModerator,
     projects,
     peerById,
-    acceptMember,
-    rejectInterest,
+    decideModeration,
     modules,
     addModule,
     deleteModule,
@@ -32,6 +33,7 @@ export function ModeratePage() {
   const [title, setTitle] = useState("")
   const [hint, setHint] = useState("")
   const [fields, setFields] = useState<FieldDraft[]>([emptyField(), emptyField()])
+  const [modNotes, setModNotes] = useState<Record<string, string>>({})
 
   const rows = useMemo(() => {
     return projects
@@ -39,30 +41,37 @@ export function ModeratePage() {
         const owner = peerById(project.ownerId)
         const done = doneCount(project, modules)
         const current = modules.find((item) => item.id === currentModuleId(project, modules))
-        const pending = project.interestIds.length
-        return { project, owner, done, current, complete: isComplete(project, modules), pending }
+        const joinPending = pendingApplications(project).length
+        return {
+          project,
+          owner,
+          done,
+          current,
+          complete: isComplete(project, modules),
+          joinPending,
+        }
       })
       .filter((row) => campus === "all" || row.owner?.campus === campus)
       .sort((a, b) => {
-        if (b.pending !== a.pending) return b.pending - a.pending
+        const rank = (status: string) => (status === "pending" ? 0 : status === "rejected" ? 1 : 2)
+        const byMod = rank(a.project.moderationStatus) - rank(b.project.moderationStatus)
+        if (byMod !== 0) return byMod
         return b.done - a.done
       })
   }, [campus, modules, peerById, projects])
 
-  const pendingApps = useMemo(() => {
+  const pendingPublication = useMemo(() => {
     return projects
-      .flatMap((project) =>
-        project.interestIds.map((peerId) => ({
-          project,
-          peer: peerById(peerId),
-          owner: peerById(project.ownerId),
-        })),
-      )
-      .filter((row) => row.peer && (campus === "all" || row.owner?.campus === campus))
+      .filter((project) => project.moderationStatus === "pending")
+      .map((project) => ({
+        project,
+        owner: peerById(project.ownerId),
+      }))
+      .filter((row) => campus === "all" || row.owner?.campus === campus)
   }, [campus, peerById, projects])
 
   const completeCount = rows.filter((row) => row.complete).length
-  const pendingCount = pendingApps.length
+  const pendingCount = pendingPublication.length
   const moduleTotal = modules.length || 1
 
   if (!isModerator) return <Navigate to="/" replace />
@@ -87,7 +96,10 @@ export function ModeratePage() {
   return (
     <div className="mx-auto max-w-5xl">
       <header className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight">Модерация</h1>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Модерация</h1>
+          <p className="mt-1 text-sm text-mute">Проверка проектов на доске. Состав команд решают владельцы.</p>
+        </div>
         <div className="flex flex-wrap gap-1.5 rounded-2xl border border-line bg-panel p-1">
           {CAMPUSES.map((item) => {
             const active = campus === item
@@ -111,61 +123,83 @@ export function ModeratePage() {
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <Stat label="команд" value={rows.length} />
         <Stat label="one-pager готов" value={completeCount} accent={completeCount > 0} />
-        <Stat label="заявки ждут" value={pendingCount} accent={pendingCount > 0} />
+        <Stat label="на проверке" value={pendingCount} accent={pendingCount > 0} />
       </div>
 
-      {pendingApps.length > 0 ? (
-        <section className="mt-8">
-          <div className="mb-3 flex items-baseline justify-between gap-3">
-            <h2 className="text-lg font-semibold tracking-tight">Заявки</h2>
-            <p className="text-xs text-mute">{pendingApps.length}</p>
-          </div>
+      <section className="mt-8">
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="text-lg font-semibold tracking-tight">Модерация проектов</h2>
+          <p className="text-xs text-mute">{pendingPublication.length}</p>
+        </div>
+        {pendingPublication.length === 0 ? (
+          <p className="rounded-2xl border border-dashed border-line px-4 py-8 text-center text-sm text-mute">
+            Нет проектов на проверке.
+          </p>
+        ) : (
           <div className="grid gap-3">
-            {pendingApps.map(({ project, peer }) => {
-              if (!peer) return null
-              return (
-                <div
-                  key={`${project.id}-${peer.id}`}
-                  className="flex flex-col gap-4 rounded-2xl border border-accent/35 bg-panel p-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex min-w-0 items-start gap-3">
-                    <Avatar id={peer.id} nickname={peer.nickname} size="sm" />
-                    <div className="min-w-0">
-                      <p className="truncate font-medium">{peer.nickname}</p>
-                      <p className="truncate text-xs text-mute">
-                        {peer.name} · {peer.campus}
-                      </p>
-                      <p className="mt-1.5 truncate text-sm text-mute">
-                        →{" "}
-                        <Link to={`/project/${project.id}`} className="text-white hover:text-accent">
-                          {project.title}
-                        </Link>
-                        <span className="text-mute"> · {project.teamName}</span>
-                      </p>
+            {pendingPublication.map(({ project, owner }) => (
+              <div
+                key={project.id}
+                className="rounded-2xl border border-accent/35 bg-panel p-4 sm:p-5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="text-base font-medium sm:text-lg">{project.title}</h3>
+                      <ModerationStatusChip status={project.moderationStatus} />
                     </div>
+                    <p className="mt-0.5 text-sm text-mute">
+                      {project.teamName} · {STATUS_LABEL[project.status]}
+                    </p>
+                    <p className="mt-2 text-sm text-white/90">{project.pitch}</p>
+                    <p className="mt-2 text-xs text-mute">
+                      {owner?.nickname ?? "—"}
+                      {owner?.name ? ` · ${owner.name}` : ""}
+                      {owner?.campus ? ` · ${owner.campus}` : ""}
+                    </p>
                   </div>
                   <div className="flex shrink-0 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => acceptMember(project.id, peer.id)}
-                      className="rounded-full bg-accent px-4 py-2 text-sm text-ink hover:brightness-110"
+                    <Link
+                      to={`/project/${project.id}`}
+                      className="rounded border border-line px-3.5 py-2 text-xs text-mute hover:text-white sm:text-sm"
                     >
-                      Принять
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => rejectInterest(project.id, peer.id)}
-                      className="rounded-full border border-line px-4 py-2 text-sm text-mute hover:border-white/20 hover:text-white"
+                      Ответы
+                    </Link>
+                    <Link
+                      to={`/project/${project.id}/onepager`}
+                      className="rounded border border-line px-3.5 py-2 text-xs text-mute hover:text-white sm:text-sm"
                     >
-                      Отклонить
-                    </button>
+                      One-pager
+                    </Link>
                   </div>
                 </div>
-              )
-            })}
+                <textarea
+                  className={`${inputClass()} mt-4 min-h-16`}
+                  value={modNotes[project.id] ?? ""}
+                  placeholder="Комментарий к решению (необязательно)"
+                  onChange={(e) => setModNotes((prev) => ({ ...prev, [project.id]: e.target.value }))}
+                />
+                <div className="mt-3 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => decideModeration(project.id, "approved", modNotes[project.id])}
+                    className="rounded bg-accent px-4 py-2 text-sm text-ink hover:brightness-110"
+                  >
+                    Опубликовать
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => decideModeration(project.id, "rejected", modNotes[project.id])}
+                    className="rounded border border-line px-4 py-2 text-sm text-mute hover:border-white/20 hover:text-white"
+                  >
+                    Отклонить
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
-        </section>
-      ) : null}
+        )}
+      </section>
 
       <section className="mt-8">
         <div className="mb-3 flex items-baseline justify-between gap-3">
@@ -179,7 +213,7 @@ export function ModeratePage() {
           </p>
         ) : (
           <div className="grid gap-3">
-            {rows.map(({ project, owner, done, current, complete, pending }) => {
+            {rows.map(({ project, owner, done, current, complete, joinPending }) => {
               const pct = Math.round((done / moduleTotal) * 100)
               const commentCount = project.comments?.length ?? 0
               return (
@@ -191,18 +225,19 @@ export function ModeratePage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <h3 className="truncate text-base font-medium sm:text-lg">{project.title}</h3>
+                        <ModerationStatusChip status={project.moderationStatus} />
                         {complete ? (
-                          <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] uppercase tracking-wider text-accent">
+                          <span className="rounded border border-accent/40 px-2 py-0.5 text-[10px] uppercase tracking-wider text-accent">
                             готово
                           </span>
                         ) : null}
-                        {pending > 0 ? (
-                          <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[10px] uppercase tracking-wider text-accent">
-                            {pending} заявк{pending === 1 ? "а" : pending < 5 ? "и" : "ок"}
+                        {joinPending > 0 ? (
+                          <span className="rounded border border-line px-2 py-0.5 text-[10px] uppercase tracking-wider text-mute">
+                            {joinPending} в команду · решает владелец
                           </span>
                         ) : null}
                         {commentCount > 0 ? (
-                          <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wider text-mute">
+                          <span className="rounded border border-line px-2 py-0.5 text-[10px] uppercase tracking-wider text-mute">
                             {commentCount} коммент.
                           </span>
                         ) : null}
@@ -212,13 +247,13 @@ export function ModeratePage() {
                     <div className="flex shrink-0 gap-2">
                       <Link
                         to={`/project/${project.id}`}
-                        className="rounded-full bg-accent px-3.5 py-2 text-xs font-medium text-ink hover:brightness-110 sm:text-sm"
+                        className="rounded bg-accent px-3.5 py-2 text-xs font-medium text-ink hover:brightness-110 sm:text-sm"
                       >
                         Ответы
                       </Link>
                       <Link
                         to={`/project/${project.id}/onepager`}
-                        className="rounded-full border border-line px-3.5 py-2 text-xs text-mute hover:border-white/20 hover:text-white sm:text-sm"
+                        className="rounded border border-line px-3.5 py-2 text-xs text-mute hover:border-white/20 hover:text-white sm:text-sm"
                       >
                         One-pager
                       </Link>
@@ -232,6 +267,7 @@ export function ModeratePage() {
                         {owner?.name ? ` · ${owner.name}` : ""}
                       </span>
                       <span>{owner?.campus ?? "—"}</span>
+                      <span>{MODERATION_STATUS_LABEL[project.moderationStatus]}</span>
                       <span className="truncate">сейчас: {current?.title ?? "—"}</span>
                     </div>
                     {commentCount > 0 ? (
@@ -269,7 +305,7 @@ export function ModeratePage() {
             <button
               type="button"
               onClick={() => setAdding(true)}
-              className="rounded-full bg-accent px-3.5 py-2 text-sm text-ink hover:brightness-110"
+              className="rounded bg-accent px-3.5 py-2 text-sm text-ink hover:brightness-110"
             >
               Добавить
             </button>
@@ -398,7 +434,7 @@ export function ModeratePage() {
               <button
                 type="button"
                 onClick={() => setFields((prev) => [...prev, emptyField()])}
-                className="rounded-full border border-line px-3.5 py-2 text-sm text-mute hover:border-white/20 hover:text-white"
+                className="rounded border border-line px-3.5 py-2 text-sm text-mute hover:border-white/20 hover:text-white"
               >
                 + поле
               </button>
@@ -406,14 +442,14 @@ export function ModeratePage() {
                 type="button"
                 onClick={onAddModule}
                 disabled={!title.trim() || !fields.some((field) => field.label.trim())}
-                className="rounded-full bg-accent px-4 py-2 text-sm text-ink hover:brightness-110 disabled:opacity-40"
+                className="rounded bg-accent px-4 py-2 text-sm text-ink hover:brightness-110 disabled:opacity-40"
               >
                 Сохранить модуль
               </button>
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-full border border-line px-3.5 py-2 text-sm text-mute hover:text-white"
+                className="rounded border border-line px-3.5 py-2 text-sm text-mute hover:text-white"
               >
                 Отмена
               </button>

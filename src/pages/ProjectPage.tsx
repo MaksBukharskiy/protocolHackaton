@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
-import { Avatar, AccessDenied, Empty, FieldLabel, inputClass } from "../components/ui"
+import {
+  ApplicationStatusChip,
+  Avatar,
+  AccessDenied,
+  Empty,
+  FieldLabel,
+  inputClass,
+  ModerationStatusChip,
+} from "../components/ui"
+import { applicationForPeer, pendingApplications } from "../lib/applications"
 import { ROLE_LABEL, STATUS_LABEL } from "../lib/labels"
 import {
   canAccessProject,
@@ -27,9 +36,10 @@ export function ProjectPage() {
     peerById,
     saveAnswer,
     updateProject,
-    toggleInterest,
-    acceptMember,
-    rejectInterest,
+    submitApplication,
+    withdrawApplication,
+    decideApplication,
+    resubmitForModeration,
     addComment,
     modules,
   } = useStore()
@@ -51,6 +61,8 @@ export function ProjectPage() {
   const [status, setStatus] = useState<ProjectStatus>("idea")
   const [neededRoles, setNeededRoles] = useState<Role[]>([])
   const [commentDraft, setCommentDraft] = useState("")
+  const [applyMessage, setApplyMessage] = useState("")
+  const [decisionNotes, setDecisionNotes] = useState<Record<string, string>>({})
 
   useEffect(() => {
     setDraft(project?.answers[selected] ?? {})
@@ -83,9 +95,10 @@ export function ProjectPage() {
 
   const board = project
   const isMember = board.memberIds.includes(currentUser.id)
+  const isOwner = board.ownerId === currentUser.id
   const canEdit = fullAccess && isMember && !isModerator
-  const canModerateJoin = isModerator || board.ownerId === currentUser.id
-  const interested = board.interestIds.includes(currentUser.id)
+  const myApp = applicationForPeer(board, currentUser.id)
+  const pending = pendingApplications(board)
   const module = modules.find((item) => item.id === selected) ?? modules[0]
   const done = doneCount(board, modules)
   const moduleIndex = module ? modules.findIndex((step) => step.id === module.id) : -1
@@ -121,6 +134,11 @@ export function ProjectPage() {
     setCommentDraft("")
   }
 
+  function onSubmitApplication() {
+    submitApplication(board.id, applyMessage)
+    setApplyMessage("")
+  }
+
   const comments = board.comments ?? []
 
   // Публичный просмотр: заявка в команду, без модулей
@@ -146,7 +164,7 @@ export function ProjectPage() {
               const member = peerById(memberId)
               if (!member) return null
               return (
-                <div key={member.id} className="flex items-center gap-2 rounded-full border border-line px-3 py-1.5">
+                <div key={member.id} className="flex items-center gap-2 rounded border border-line px-3 py-1.5">
                   <Avatar id={member.id} nickname={member.nickname} size="sm" />
                   <span className="text-sm">
                     {member.nickname}
@@ -158,16 +176,66 @@ export function ProjectPage() {
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => toggleInterest(project.id)}
-          className={`mt-6 rounded-full px-5 py-2.5 text-sm ${
-            interested ? "border border-line text-mute" : "bg-accent text-ink"
-          }`}
-        >
-          {interested ? "Отменить заявку" : "Хочу в команду"}
-        </button>
-        {interested ? <p className="mt-2 text-xs text-mute">Заявка отправлена. Жди решения владельца.</p> : null}
+        <section className="mt-6 rounded-2xl border border-line bg-panel p-5">
+          <p className="text-xs uppercase tracking-wider text-mute">заявка в команду</p>
+          {myApp ? (
+            <div className="mt-3 space-y-3">
+              <ApplicationStatusChip status={myApp.status} />
+              {myApp.message ? (
+                <p className="text-sm text-mute">
+                  Твой комментарий: <span className="text-white/90">{myApp.message}</span>
+                </p>
+              ) : null}
+              {myApp.decisionNote ? (
+                <p className="text-sm text-mute">
+                  Ответ команды: <span className="text-white/90">{myApp.decisionNote}</span>
+                </p>
+              ) : null}
+              {myApp.status === "pending" ? (
+                <button
+                  type="button"
+                  onClick={() => withdrawApplication(project.id)}
+                  className="rounded border border-line px-4 py-2 text-sm text-mute hover:text-white"
+                >
+                  Отменить заявку
+                </button>
+              ) : null}
+              {myApp.status === "rejected" ? (
+                <div className="space-y-3">
+                  <textarea
+                    className={`${inputClass()} min-h-20`}
+                    value={applyMessage}
+                    placeholder="Новый комментарий к заявке…"
+                    onChange={(e) => setApplyMessage(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={onSubmitApplication}
+                    className="rounded bg-accent px-5 py-2.5 text-sm text-ink"
+                  >
+                    Подать снова
+                  </button>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <div className="mt-3 space-y-3">
+              <textarea
+                className={`${inputClass()} min-h-24`}
+                value={applyMessage}
+                placeholder="Коротко: кто ты и чем поможешь команде"
+                onChange={(e) => setApplyMessage(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={onSubmitApplication}
+                className="rounded bg-accent px-5 py-2.5 text-sm text-ink"
+              >
+                Хочу в команду
+              </button>
+            </div>
+          )}
+        </section>
       </div>
     )
   }
@@ -180,7 +248,10 @@ export function ProjectPage() {
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-accent">{STATUS_LABEL[project.status]}</p>
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-xs text-accent">{STATUS_LABEL[project.status]}</p>
+            <ModerationStatusChip status={project.moderationStatus} />
+          </div>
           <p className="mt-1 text-xs text-mute">{project.teamName}</p>
           <h1 className="mt-1 text-4xl font-semibold tracking-tight">{project.title}</h1>
           <p className="mt-2 max-w-2xl text-mute">{project.pitch}</p>
@@ -191,7 +262,7 @@ export function ProjectPage() {
           </p>
           <Link
             to={`/project/${project.id}/onepager`}
-            className="rounded-full bg-accent px-4 py-2 text-sm text-ink hover:brightness-110"
+            className="rounded bg-accent px-4 py-2 text-sm text-ink hover:brightness-110"
           >
             One-pager
           </Link>
@@ -200,14 +271,50 @@ export function ProjectPage() {
 
       {fullAccess && isModerator && !isMember ? (
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel px-4 py-3">
-          <p className="text-sm text-mute">Просмотр · заявки</p>
+          <p className="text-sm text-mute">Просмотр · модерация публикации</p>
           <Link
             to="/moderate"
-            className="shrink-0 rounded-full border border-line px-3 py-1.5 text-xs text-mute hover:border-white/20 hover:text-white"
+            className="shrink-0 rounded border border-line px-3 py-1.5 text-xs text-mute hover:border-white/20 hover:text-white"
           >
             ← модерация
           </Link>
         </div>
+      ) : null}
+
+      {canEdit ? (
+        <section className="mt-6 rounded-2xl border border-line bg-panel p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-xs uppercase tracking-wider text-mute">публикация на доске</p>
+            <ModerationStatusChip status={project.moderationStatus} />
+          </div>
+          {project.moderationStatus === "pending" ? (
+            <p className="mt-2 text-sm text-mute">Проект на проверке у модератора. На публичной доске его пока нет.</p>
+          ) : null}
+          {project.moderationStatus === "approved" ? (
+            <p className="mt-2 text-sm text-mute">Опубликован. При статусе «ищем в команду» виден всем.</p>
+          ) : null}
+          {project.moderationStatus === "rejected" ? (
+            <div className="mt-2 space-y-3">
+              <p className="text-sm text-mute">
+                Отклонён модератором
+                {project.moderationNote ? (
+                  <>
+                    : <span className="text-white/90">{project.moderationNote}</span>
+                  </>
+                ) : (
+                  "."
+                )}
+              </p>
+              <button
+                type="button"
+                onClick={() => resubmitForModeration(project.id)}
+                className="rounded bg-accent px-4 py-2 text-sm text-ink"
+              >
+                Отправить на проверку снова
+              </button>
+            </div>
+          ) : null}
+        </section>
       ) : null}
 
       {canEdit ? (
@@ -242,7 +349,7 @@ export function ProjectPage() {
                 ))}
               </select>
               <p className="mt-1 text-[11px] text-mute">
-                «ищем в команду» — проект виден всем, можно принимать заявки
+                «ищем в команду» — после публикации заявки приходят владельцу
               </p>
             </div>
             <div>
@@ -253,7 +360,7 @@ export function ProjectPage() {
                     key={role}
                     type="button"
                     onClick={() => setNeededRoles(toggleRole(neededRoles, role))}
-                    className={`rounded-full border px-3 py-1 text-xs ${
+                    className={`rounded border px-3 py-1 text-xs ${
                       neededRoles.includes(role) ? "border-accent bg-accent text-ink" : "border-line text-mute"
                     }`}
                   >
@@ -269,36 +376,55 @@ export function ProjectPage() {
         </section>
       ) : null}
 
-      {canModerateJoin && project.interestIds.length > 0 ? (
+      {isOwner && pending.length > 0 ? (
         <section className="mt-6 rounded-2xl border border-accent/40 bg-panel p-5">
-          <p className="text-xs uppercase tracking-wider text-accent">заявки</p>
-          <div className="mt-3 grid gap-3">
-            {project.interestIds.map((peerId) => {
-              const peer = peerById(peerId)
+          <p className="text-xs uppercase tracking-wider text-accent">заявки в команду</p>
+          <div className="mt-3 grid gap-4">
+            {pending.map((application) => {
+              const peer = peerById(application.peerId)
               if (!peer) return null
               return (
-                <div key={peer.id} className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex items-center gap-2">
-                    <Avatar id={peer.id} nickname={peer.nickname} size="sm" />
-                    <div>
-                      <p className="text-sm">{peer.nickname}</p>
-                      <p className="text-xs text-mute">
-                        {peer.name} · {peer.campus}
-                      </p>
+                <div key={application.id} className="border-t border-line pt-4 first:border-t-0 first:pt-0">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex items-center gap-2">
+                      <Avatar id={peer.id} nickname={peer.nickname} size="sm" />
+                      <div>
+                        <p className="text-sm">{peer.nickname}</p>
+                        <p className="text-xs text-mute">
+                          {peer.name} · {peer.campus}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  {application.message ? (
+                    <p className="mt-2 text-sm text-white/90">{application.message}</p>
+                  ) : (
+                    <p className="mt-2 text-sm text-mute">Без комментария</p>
+                  )}
+                  <textarea
+                    className={`${inputClass()} mt-3 min-h-16`}
+                    value={decisionNotes[application.id] ?? ""}
+                    placeholder="Комментарий к решению (необязательно)"
+                    onChange={(e) =>
+                      setDecisionNotes((prev) => ({ ...prev, [application.id]: e.target.value }))
+                    }
+                  />
+                  <div className="mt-3 flex gap-2">
                     <button
                       type="button"
-                      onClick={() => acceptMember(project.id, peer.id)}
-                      className="rounded-full bg-accent px-3 py-1.5 text-xs text-ink"
+                      onClick={() =>
+                        decideApplication(project.id, application.id, "accepted", decisionNotes[application.id])
+                      }
+                      className="rounded bg-accent px-3 py-1.5 text-xs text-ink"
                     >
                       Принять
                     </button>
                     <button
                       type="button"
-                      onClick={() => rejectInterest(project.id, peer.id)}
-                      className="rounded-full border border-line px-3 py-1.5 text-xs text-mute"
+                      onClick={() =>
+                        decideApplication(project.id, application.id, "rejected", decisionNotes[application.id])
+                      }
+                      className="rounded border border-line px-3 py-1.5 text-xs text-mute"
                     >
                       Отклонить
                     </button>
@@ -313,7 +439,7 @@ export function ProjectPage() {
       {(comments.length > 0 || isModerator) && (
         <section className="mt-6 rounded-2xl border border-line bg-panel p-5">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="text-xs uppercase tracking-wider text-mute">комментарии</p>
+            <p className="text-xs uppercase tracking-wider text-mute">комментарии модератора</p>
             {comments.length > 0 ? <p className="text-xs text-mute">{comments.length}</p> : null}
           </div>
 
@@ -361,7 +487,7 @@ export function ProjectPage() {
                 type="button"
                 disabled={!commentDraft.trim()}
                 onClick={onAddComment}
-                className="mt-3 rounded-full bg-accent px-4 py-2 text-sm text-ink hover:brightness-110 disabled:opacity-40"
+                className="mt-3 rounded bg-accent px-4 py-2 text-sm text-ink hover:brightness-110 disabled:opacity-40"
               >
                 Отправить
               </button>
@@ -429,45 +555,45 @@ export function ProjectPage() {
         <section className="rounded-2xl border border-line bg-panel p-5">
           {module ? (
             <>
-          <h2 className="text-2xl font-semibold">{module.title}</h2>
-          <p className="mt-1 text-sm text-mute">{module.hint}</p>
+              <h2 className="text-2xl font-semibold">{module.title}</h2>
+              <p className="mt-1 text-sm text-mute">{module.hint}</p>
 
-          <div className="mt-5 grid gap-4">
-            {module.fields.map((field) => (
-              <div key={field.id}>
-                <FieldLabel>{field.label}</FieldLabel>
-                <textarea
-                  className={`${inputClass()} min-h-20`}
-                  value={draft[field.id] ?? ""}
-                  disabled={!canEdit}
-                  placeholder={field.placeholder}
-                  onChange={(e) => {
-                    setDraft((prev) => ({ ...prev, [field.id]: e.target.value }))
-                    setSaved(false)
-                  }}
-                />
+              <div className="mt-5 grid gap-4">
+                {module.fields.map((field) => (
+                  <div key={field.id}>
+                    <FieldLabel>{field.label}</FieldLabel>
+                    <textarea
+                      className={`${inputClass()} min-h-20`}
+                      value={draft[field.id] ?? ""}
+                      disabled={!canEdit}
+                      placeholder={field.placeholder}
+                      onChange={(e) => {
+                        setDraft((prev) => ({ ...prev, [field.id]: e.target.value }))
+                        setSaved(false)
+                      }}
+                    />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
 
-          {canEdit ? (
-            <div className="mt-4 flex flex-wrap items-center gap-3">
-              <button type="button" onClick={onSave} className="rounded-full bg-accent px-5 py-2.5 text-sm text-ink">
-                Сохранить ответ
-              </button>
-              {saved && nextModule ? (
-                <button type="button" onClick={() => openModule(nextModule.id)} className="text-sm text-accent">
-                  Дальше → {nextModule.title}
-                </button>
+              {canEdit ? (
+                <div className="mt-4 flex flex-wrap items-center gap-3">
+                  <button type="button" onClick={onSave} className="rounded bg-accent px-5 py-2.5 text-sm text-ink">
+                    Сохранить ответ
+                  </button>
+                  {saved && nextModule ? (
+                    <button type="button" onClick={() => openModule(nextModule.id)} className="text-sm text-accent">
+                      Дальше → {nextModule.title}
+                    </button>
+                  ) : null}
+                  {saved ? (
+                    <Link to={`/project/${project.id}/onepager`} className="text-sm text-accent">
+                      One-pager →
+                    </Link>
+                  ) : null}
+                  {saved ? <span className="text-xs text-mute">сохранено</span> : null}
+                </div>
               ) : null}
-              {saved ? (
-                <Link to={`/project/${project.id}/onepager`} className="text-sm text-accent">
-                  One-pager →
-                </Link>
-              ) : null}
-              {saved ? <span className="text-xs text-mute">сохранено</span> : null}
-            </div>
-          ) : null}
             </>
           ) : (
             <p className="text-sm text-mute">Нет модулей в программе.</p>
@@ -482,7 +608,7 @@ export function ProjectPage() {
             const member = peerById(memberId)
             if (!member) return null
             return (
-              <div key={member.id} className="flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1.5">
+              <div key={member.id} className="flex items-center gap-2 rounded border border-line bg-panel px-3 py-1.5">
                 <Avatar id={member.id} nickname={member.nickname} size="sm" />
                 <span className="text-sm">
                   {member.nickname}
