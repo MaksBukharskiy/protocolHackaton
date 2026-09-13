@@ -1,4 +1,4 @@
-import type { LookingFor, ProjectStatus, Role } from "../types"
+import type { AccessRole, LookingFor, ProjectStatus, Role } from "../types"
 
 export const ROLE_LABEL: Record<Role, string> = {
   frontend: "фронтенд",
@@ -13,6 +13,11 @@ export const STATUS_LABEL: Record<ProjectStatus, string> = {
   idea: "идея",
   building: "в работе",
   looking: "ищем команду",
+}
+
+export const ACCESS_LABEL: Record<AccessRole, string> = {
+  participant: "участник",
+  moderator: "модератор",
 }
 
 export const LOOKING_LABEL: Record<LookingFor, string> = {

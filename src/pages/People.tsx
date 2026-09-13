@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { PeerCard } from "../components/PeerCard"
-import { Empty } from "../components/ui"
+import { Empty, selectClass } from "../components/ui"
 import { LOOKING_LABEL, ROLE_LABEL } from "../lib/labels"
 import { useStore } from "../store"
 import { LOOKING_FOR, ROLES, type LookingFor, type Role } from "../types"
@@ -24,14 +24,14 @@ export function PeoplePage() {
 
   return (
     <div>
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-lime">пиры</p>
+      <p className="text-xs uppercase tracking-[0.2em] text-mute">пиры</p>
       <h1 className="mt-1 text-3xl font-semibold tracking-tight">Кто есть в кампусе</h1>
 
       <div className="mt-6 flex flex-wrap gap-2">
         <select
           value={role}
           onChange={(e) => setRole(e.target.value as Role | "all")}
-          className="rounded-full border border-line bg-panel px-3 py-1.5 font-mono text-xs"
+          className={selectClass()}
         >
           <option value="all">любой навык</option>
           {ROLES.map((item) => (
@@ -43,7 +43,7 @@ export function PeoplePage() {
         <select
           value={looking}
           onChange={(e) => setLooking(e.target.value as LookingFor | "all")}
-          className="rounded-full border border-line bg-panel px-3 py-1.5 font-mono text-xs"
+          className={selectClass()}
         >
           <option value="all">любое намерение</option>
           {LOOKING_FOR.map((item) => (
@@ -56,7 +56,7 @@ export function PeoplePage() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="ник, навык, кампус"
-          className="min-w-48 flex-1 rounded-full border border-line bg-panel px-3 py-1.5 font-mono text-xs outline-none focus:border-lime"
+          className="min-w-48 flex-1 rounded-lg border border-line bg-panel px-3 py-1.5 text-xs outline-none focus:border-accent"
         />
       </div>
 

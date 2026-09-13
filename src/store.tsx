@@ -7,16 +7,29 @@ import {
   type ReactNode,
 } from "react"
 import { STORAGE_KEY, STORAGE_VERSION, peers as seedPeers, projects as seedProjects } from "./data/seed"
-import type { AppState, Peer, Project } from "./types"
+import { emptyAnswers } from "./lib/modules"
+import type { AccessRole, AppState, ModuleId, Peer, Project } from "./types"
 
 type Store = {
   currentUser: Peer | null
+  currentRole: AccessRole | null
+  isModerator: boolean
   peers: Peer[]
   projects: Project[]
-  login: (peerId: string) => void
+  login: (peerId: string, role: AccessRole) => void
+  verify: (nickname: string, password: string) => Peer | undefined
+  register: (input: {
+    nickname: string
+    name: string
+    campus: string
+    password: string
+    role: AccessRole
+  }) => string
   logout: () => void
   updatePeer: (peerId: string, patch: Partial<Peer>) => void
-  createProject: (input: Omit<Project, "id" | "ownerId" | "memberIds" | "interestIds">) => string
+  createProject: (input: Omit<Project, "id" | "ownerId" | "memberIds" | "interestIds" | "answers" | "pagerNote"> & { extraMembers?: string[] }) => string
+  updateProject: (projectId: string, patch: Partial<Pick<Project, "title" | "teamName" | "pitch" | "pagerNote">>) => void
+  saveAnswer: (projectId: string, moduleId: ModuleId, fields: Record<string, string>) => void
   toggleInterest: (projectId: string) => void
   acceptMember: (projectId: string, peerId: string) => void
   resetDemo: () => void
@@ -29,8 +42,10 @@ function emptyState(): AppState {
   return {
     version: STORAGE_VERSION,
     currentUserId: null,
+    currentRole: null,
     peers: seedPeers,
     projects: seedProjects,
+    passwords: Object.fromEntries(seedPeers.map((peer) => [peer.id, "21"])),
   }
 }
 
@@ -60,14 +75,49 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<Store>(() => {
     const currentUser = state.peers.find((p) => p.id === state.currentUserId) ?? null
+    const currentRole = currentUser ? state.currentRole : null
+    const isModerator = currentRole === "moderator"
 
     return {
       currentUser,
+      currentRole,
+      isModerator,
       peers: state.peers,
       projects: state.projects,
       peerById: (id) => state.peers.find((p) => p.id === id),
-      login: (peerId) => commit({ ...state, currentUserId: peerId }),
-      logout: () => commit({ ...state, currentUserId: null }),
+      login: (peerId, role) => commit({ ...state, currentUserId: peerId, currentRole: role }),
+      verify: (nickname, password) => {
+        const loginName = nickname.trim().toLowerCase()
+        const peer = state.peers.find((item) => item.nickname.toLowerCase() === loginName || item.id === loginName)
+        if (!peer || state.passwords[peer.id] !== password) return undefined
+        return peer
+      },
+      register: (input) => {
+        const nickname = input.nickname.trim().toLowerCase()
+        const taken = state.peers.some((peer) => peer.nickname.toLowerCase() === nickname)
+        if (taken) return ""
+        const id = nickname.replace(/[^a-z0-9]/g, "") || crypto.randomUUID().slice(0, 8)
+        const peer: Peer = {
+          id,
+          nickname,
+          name: input.name.trim(),
+          campus: input.campus.trim() || "Москва",
+          cohort: "кластер 21",
+          bio: "Только что зашёл в protocol. Профиль ещё пустой.",
+          skills: [],
+          roles: ["frontend"],
+          lookingFor: "teammate",
+        }
+        commit({
+          ...state,
+          peers: [peer, ...state.peers],
+          passwords: { ...state.passwords, [id]: input.password },
+          currentUserId: id,
+          currentRole: input.role,
+        })
+        return id
+      },
+      logout: () => commit({ ...state, currentUserId: null, currentRole: null }),
       resetDemo: () => commit(emptyState()),
       updatePeer: (peerId, patch) => {
         commit({
@@ -79,15 +129,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const id = crypto.randomUUID()
         const ownerId = state.currentUserId
         if (!ownerId) return id
+        const { extraMembers = [], ...rest } = input
+        const extra = extraMembers
+          .map((nick) => state.peers.find((p) => p.nickname.toLowerCase() === nick.trim().toLowerCase())?.id)
+          .filter((memberId): memberId is string => Boolean(memberId) && memberId !== ownerId)
         const project: Project = {
-          ...input,
+          ...rest,
           id,
           ownerId,
-          memberIds: [ownerId],
+          memberIds: [ownerId, ...extra],
           interestIds: [],
+          answers: emptyAnswers(),
+          pagerNote: "",
         }
         commit({ ...state, projects: [project, ...state.projects] })
         return id
+      },
+      updateProject: (projectId, patch) => {
+        const me = state.currentUserId
+        const moderator = state.currentRole === "moderator"
+        commit({
+          ...state,
+          projects: state.projects.map((project) => {
+            if (project.id !== projectId) return project
+            if (!me || (!moderator && project.ownerId !== me && !project.memberIds.includes(me))) return project
+            return { ...project, ...patch }
+          }),
+        })
+      },
+      saveAnswer: (projectId, moduleId, fields) => {
+        const me = state.currentUserId
+        const moderator = state.currentRole === "moderator"
+        commit({
+          ...state,
+          projects: state.projects.map((project) => {
+            if (project.id !== projectId) return project
+            if (!me || (!moderator && !project.memberIds.includes(me))) return project
+            return {
+              ...project,
+              answers: { ...project.answers, [moduleId]: fields },
+            }
+          }),
+        })
       },
       toggleInterest: (projectId) => {
         const me = state.currentUserId
@@ -109,10 +192,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       acceptMember: (projectId, peerId) => {
         const me = state.currentUserId
+        const moderator = state.currentRole === "moderator"
         commit({
           ...state,
           projects: state.projects.map((project) => {
-            if (project.id !== projectId || project.ownerId !== me) return project
+            if (project.id !== projectId) return project
+            if (!moderator && project.ownerId !== me) return project
             return {
               ...project,
               memberIds: project.memberIds.includes(peerId)

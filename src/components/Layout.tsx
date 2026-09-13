@@ -1,56 +1,70 @@
 import { Navigate, NavLink, Outlet, useNavigate } from "react-router-dom"
+import { ACCESS_LABEL } from "../lib/labels"
 import { useStore } from "../store"
+import { Brand } from "./Logo"
 import { Avatar } from "./ui"
 
 const linkClass = ({ isActive }: { isActive: boolean }) =>
-  `rounded-full px-3 py-1.5 font-mono text-sm ${
-    isActive ? "bg-lime text-ink" : "text-mute hover:text-white"
+  `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm ${
+    isActive ? "bg-white/5 text-white" : "text-mute hover:bg-white/5 hover:text-white"
   }`
 
 export function Layout() {
-  const { currentUser, logout } = useStore()
+  const { currentUser, currentRole, isModerator, logout } = useStore()
   const navigate = useNavigate()
 
-  if (!currentUser) return <Navigate to="/login" replace />
+  if (!currentUser || !currentRole) return <Navigate to="/login" replace />
+
+  const nav = isModerator
+    ? [
+        { to: "/", label: "Обзор", end: true },
+        { to: "/analytics", label: "Аналитика", end: false },
+        { to: "/moderate", label: "Модерация", end: false },
+        { to: "/people", label: "Пиры", end: false },
+        { to: "/me", label: "Профиль", end: false },
+      ]
+    : [
+        { to: "/", label: "Мой проект", end: true },
+        { to: "/analytics", label: "Аналитика", end: false },
+        { to: "/new", label: "Создать", end: false },
+        { to: "/people", label: "Пиры", end: false },
+        { to: "/me", label: "Профиль", end: false },
+      ]
 
   return (
-    <div className="min-h-dvh bg-ink">
-      <header className="sticky top-0 z-10 border-b border-line bg-ink/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-          <NavLink to="/" className="flex items-baseline gap-2">
-            <span className="font-mono text-lime">21</span>
-            <span className="text-lg font-semibold tracking-tight">Сквад</span>
-          </NavLink>
-          <nav className="flex items-center gap-1">
-            <NavLink to="/" end className={linkClass}>
-              Лента
-            </NavLink>
-            <NavLink to="/people" className={linkClass}>
-              Пиры
-            </NavLink>
-            <NavLink to="/new" className={linkClass}>
-              Проект
-            </NavLink>
-          </nav>
-          <div className="flex items-center gap-3">
-            <NavLink to="/me" className="flex items-center gap-2">
-              <Avatar id={currentUser.id} nickname={currentUser.nickname} size="sm" />
-              <span className="hidden font-mono text-sm sm:inline">{currentUser.nickname}</span>
-            </NavLink>
-            <button
-              type="button"
-              onClick={() => {
-                logout()
-                navigate("/login")
-              }}
-              className="font-mono text-xs text-mute hover:text-white"
-            >
-              выйти
-            </button>
+    <div className="min-h-dvh bg-ink lg:flex">
+      <aside className="flex flex-col border-b border-line px-4 py-4 lg:sticky lg:top-0 lg:h-dvh lg:w-64 lg:border-b-0 lg:border-r">
+        <NavLink to="/" className="px-1">
+          <Brand />
+        </NavLink>
+        <div className="mt-6 flex items-center gap-3 px-1">
+          <Avatar id={currentUser.id} nickname={currentUser.nickname} size="sm" />
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{currentUser.name}</p>
+            <p className="truncate text-xs text-mute">
+              {currentUser.nickname} · {ACCESS_LABEL[currentRole]}
+            </p>
           </div>
         </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-8">
+        <nav className="mt-6 flex gap-1 overflow-x-auto lg:flex-1 lg:flex-col">
+          {nav.map((item) => (
+            <NavLink key={item.to} to={item.to} end={item.end} className={linkClass}>
+              {item.label}
+            </NavLink>
+          ))}
+        </nav>
+        <button
+          type="button"
+          onClick={() => {
+            logout()
+            navigate("/login")
+          }}
+          className="mt-4 w-full rounded-full bg-accent py-2.5 text-sm text-ink hover:brightness-110"
+        >
+          Выйти
+        </button>
+      </aside>
+      <main className="min-w-0 flex-1 px-4 py-8 sm:px-8">
         <Outlet />
       </main>
     </div>

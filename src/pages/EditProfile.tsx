@@ -1,9 +1,12 @@
 import { useState, type FormEvent } from "react"
 import { useNavigate } from "react-router-dom"
-import { FieldLabel, inputClass } from "../components/ui"
+import { FieldLabel } from "../components/ui"
 import { LOOKING_LABEL, ROLE_LABEL } from "../lib/labels"
 import { useStore } from "../store"
 import { LOOKING_FOR, ROLES, type LookingFor, type Role } from "../types"
+
+const fieldClass =
+  "w-full rounded-lg border border-line bg-ink px-4 py-2.5 text-sm outline-none placeholder:text-mute/70 focus:border-accent"
 
 function toggleRole(roles: Role[], role: Role) {
   return roles.includes(role) ? roles.filter((item) => item !== role) : [...roles, role]
@@ -39,32 +42,32 @@ export function EditProfilePage() {
 
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-xl">
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-lime">профиль</p>
+      <p className="text-xs uppercase tracking-[0.2em] text-mute">профиль</p>
       <h1 className="mt-1 text-3xl font-semibold tracking-tight">Редактировать себя</h1>
-      <p className="mt-2 font-mono text-sm text-mute">{currentUser.nickname}</p>
+      <p className="mt-2 text-sm text-mute">{currentUser.nickname}</p>
 
       <div className="mt-8 grid gap-4">
         <div>
           <FieldLabel>имя</FieldLabel>
-          <input className={inputClass()} value={name} onChange={(e) => setName(e.target.value)} required />
+          <input className={fieldClass} value={name} onChange={(e) => setName(e.target.value)} required />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <FieldLabel>кампус</FieldLabel>
-            <input className={inputClass()} value={campus} onChange={(e) => setCampus(e.target.value)} required />
+            <input className={fieldClass} value={campus} onChange={(e) => setCampus(e.target.value)} required />
           </div>
           <div>
             <FieldLabel>кластер</FieldLabel>
-            <input className={inputClass()} value={cohort} onChange={(e) => setCohort(e.target.value)} required />
+            <input className={fieldClass} value={cohort} onChange={(e) => setCohort(e.target.value)} required />
           </div>
         </div>
         <div>
           <FieldLabel>о себе</FieldLabel>
-          <textarea className={`${inputClass()} min-h-28`} value={bio} onChange={(e) => setBio(e.target.value)} required />
+          <textarea className={`${fieldClass} min-h-28`} value={bio} onChange={(e) => setBio(e.target.value)} required />
         </div>
         <div>
           <FieldLabel>навыки через запятую</FieldLabel>
-          <input className={inputClass()} value={skills} onChange={(e) => setSkills(e.target.value)} />
+          <input className={fieldClass} value={skills} onChange={(e) => setSkills(e.target.value)} />
         </div>
         <div>
           <FieldLabel>роли</FieldLabel>
@@ -74,8 +77,8 @@ export function EditProfilePage() {
                 key={role}
                 type="button"
                 onClick={() => setRoles(toggleRole(roles, role))}
-                className={`rounded-full border px-3 py-1 font-mono text-xs ${
-                  roles.includes(role) ? "border-lime bg-lime text-ink" : "border-line text-mute"
+                className={`rounded-lg border px-3 py-1.5 text-xs ${
+                  roles.includes(role) ? "border-accent bg-accent text-ink" : "border-line text-mute"
                 }`}
               >
                 {ROLE_LABEL[role]}
@@ -86,7 +89,7 @@ export function EditProfilePage() {
         <div>
           <FieldLabel>кого ищу</FieldLabel>
           <select
-            className={inputClass()}
+            className={fieldClass}
             value={lookingFor}
             onChange={(e) => setLookingFor(e.target.value as LookingFor)}
           >
@@ -99,7 +102,7 @@ export function EditProfilePage() {
         </div>
       </div>
 
-      <button type="submit" className="mt-8 rounded-full bg-lime px-5 py-2.5 font-mono text-sm text-ink">
+      <button type="submit" className="mt-8 rounded-lg bg-accent px-5 py-2.5 text-sm text-ink">
         Сохранить
       </button>
     </form>

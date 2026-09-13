@@ -13,27 +13,30 @@ export function NewProjectPage() {
   const { createProject } = useStore()
   const navigate = useNavigate()
   const [title, setTitle] = useState("")
+  const [teamName, setTeamName] = useState("")
   const [pitch, setPitch] = useState("")
   const [status, setStatus] = useState<ProjectStatus>("looking")
   const [stack, setStack] = useState("")
   const [neededRoles, setNeededRoles] = useState<Role[]>(["frontend"])
+  const [roster, setRoster] = useState("")
 
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     const id = createProject({
       title: title.trim(),
+      teamName: teamName.trim(),
       pitch: pitch.trim(),
       status,
       stack: stack.split(",").map((s) => s.trim()).filter(Boolean),
       neededRoles,
+      extraMembers: roster.split(",").map((item) => item.trim()).filter(Boolean),
     })
     navigate(`/project/${id}`)
   }
 
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-xl">
-      <p className="font-mono text-xs uppercase tracking-[0.2em] text-lime">новый проект</p>
-      <h1 className="mt-1 text-3xl font-semibold tracking-tight">Собрать сквад</h1>
+      <h1 className="text-3xl font-semibold tracking-tight">Проект</h1>
 
       <div className="mt-8 grid gap-4">
         <div>
@@ -47,7 +50,26 @@ export function NewProjectPage() {
           />
         </div>
         <div>
-          <FieldLabel>питч</FieldLabel>
+          <FieldLabel>название команды</FieldLabel>
+          <input
+            className={inputClass()}
+            value={teamName}
+            onChange={(e) => setTeamName(e.target.value)}
+            placeholder="Слот"
+            required
+          />
+        </div>
+        <div>
+          <FieldLabel>состав команды, ники через запятую</FieldLabel>
+          <input
+            className={inputClass()}
+            value={roster}
+            onChange={(e) => setRoster(e.target.value)}
+            placeholder="akostyl, mivanov"
+          />
+        </div>
+        <div>
+          <FieldLabel>краткое описание</FieldLabel>
           <textarea
             className={`${inputClass()} min-h-28`}
             value={pitch}
@@ -87,8 +109,8 @@ export function NewProjectPage() {
                 key={role}
                 type="button"
                 onClick={() => setNeededRoles(toggleRole(neededRoles, role))}
-                className={`rounded-full border px-3 py-1 font-mono text-xs ${
-                  neededRoles.includes(role) ? "border-lime bg-lime text-ink" : "border-line text-mute"
+                className={`rounded-full border px-3 py-1 text-xs ${
+                  neededRoles.includes(role) ? "border-accent bg-accent text-ink" : "border-line text-mute"
                 }`}
               >
                 {ROLE_LABEL[role]}
@@ -98,8 +120,8 @@ export function NewProjectPage() {
         </div>
       </div>
 
-      <button type="submit" className="mt-8 rounded-full bg-lime px-5 py-2.5 font-mono text-sm text-ink">
-        Опубликовать
+      <button type="submit" className="mt-8 rounded-full bg-accent px-5 py-2.5 text-sm text-ink">
+        Открыть модуль
       </button>
     </form>
   )

@@ -18,18 +18,18 @@ export function PeerPage() {
 
   return (
     <div className="mx-auto max-w-3xl">
-      <Link to="/people" className="font-mono text-xs text-mute hover:text-white">
+      <Link to="/people" className="text-xs text-mute hover:text-white">
         ← пиры
       </Link>
       <div className="mt-4 flex items-start gap-4">
         <Avatar id={peer.id} nickname={peer.nickname} size="lg" />
         <div>
-          <p className="font-mono text-sm text-lime">{peer.nickname}</p>
+          <p className="text-sm text-accent">{peer.nickname}</p>
           <h1 className="text-3xl font-semibold tracking-tight">{peer.name}</h1>
-          <p className="mt-1 font-mono text-xs text-mute">
+          <p className="mt-1 text-xs text-mute">
             {peer.campus} · {peer.cohort}
           </p>
-          <p className="mt-3 font-mono text-[11px] uppercase tracking-wider text-mute">
+          <p className="mt-3 text-[11px] uppercase tracking-wider text-mute">
             {LOOKING_LABEL[peer.lookingFor]}
           </p>
         </div>
@@ -46,13 +46,13 @@ export function PeerPage() {
         ))}
       </div>
       {currentUser?.id === peer.id ? (
-        <Link to="/me" className="mt-6 inline-block font-mono text-sm text-lime">
+        <Link to="/me" className="mt-6 inline-block text-sm text-accent">
           редактировать профиль →
         </Link>
       ) : null}
 
       <section className="mt-10">
-        <h2 className="font-mono text-xs uppercase tracking-wider text-mute">проекты</h2>
+        <h2 className="text-xs uppercase tracking-wider text-mute">проекты</h2>
         {owned.length === 0 && joined.length === 0 ? (
           <p className="mt-3 text-sm text-mute">Пока без проектов на доске.</p>
         ) : (

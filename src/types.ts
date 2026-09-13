@@ -15,6 +15,9 @@ export type ProjectStatus = (typeof PROJECT_STATUSES)[number]
 export const LOOKING_FOR = ["cofounder", "teammate", "none"] as const
 export type LookingFor = (typeof LOOKING_FOR)[number]
 
+export const ACCESS_ROLES = ["participant", "moderator"] as const
+export type AccessRole = (typeof ACCESS_ROLES)[number]
+
 export type Peer = {
   id: string
   nickname: string
@@ -27,21 +30,29 @@ export type Peer = {
   lookingFor: LookingFor
 }
 
+export const MODULE_IDS = ["problem", "audience", "solution", "wedge", "ask", "next"] as const
+export type ModuleId = (typeof MODULE_IDS)[number]
+
 export type Project = {
   id: string
   ownerId: string
   title: string
+  teamName: string
   pitch: string
   status: ProjectStatus
   stack: string[]
   neededRoles: Role[]
   memberIds: string[]
   interestIds: string[]
+  answers: Record<ModuleId, Record<string, string>>
+  pagerNote: string
 }
 
 export type AppState = {
   version: number
   currentUserId: string | null
+  currentRole: AccessRole | null
   peers: Peer[]
   projects: Project[]
+  passwords: Record<string, string>
 }

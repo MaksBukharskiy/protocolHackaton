@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom"
 import { ROLE_LABEL, STATUS_LABEL } from "../lib/labels"
+import { doneCount, MODULES } from "../lib/modules"
 import { useStore } from "../store"
 import type { Project } from "../types"
 import { Avatar, Chip } from "./ui"
@@ -11,10 +12,11 @@ export function ProjectCard({ project }: { project: Project }) {
   return (
     <Link
       to={`/project/${project.id}`}
-      className="block rounded-2xl border border-line bg-panel p-5 transition hover:border-lime/60"
+      className="block rounded-2xl border border-line bg-panel p-5 transition hover:border-accent/70"
     >
       <div className="flex items-start justify-between gap-3">
         <div>
+          <p className="text-xs text-mute">{project.teamName}</p>
           <h3 className="text-xl font-semibold tracking-tight">{project.title}</h3>
           <p className="mt-2 text-sm leading-relaxed text-mute">{project.pitch}</p>
         </div>
@@ -26,13 +28,14 @@ export function ProjectCard({ project }: { project: Project }) {
         ))}
       </div>
       <div className="mt-5 flex items-center justify-between gap-3">
-        <p className="font-mono text-[11px] uppercase tracking-wider text-mute">
-          ищем: {project.neededRoles.map((role) => ROLE_LABEL[role]).join(", ") || "никого"}
+        <p className="text-[11px] uppercase tracking-wider text-mute">
+          модули {doneCount(project)}/{MODULES.length} · ищем:{" "}
+          {project.neededRoles.map((role) => ROLE_LABEL[role]).join(", ") || "никого"}
         </p>
         {owner ? (
           <div className="flex items-center gap-2">
             <Avatar id={owner.id} nickname={owner.nickname} size="sm" />
-            <span className="font-mono text-xs">{owner.nickname}</span>
+            <span className="text-xs text-mute">{owner.nickname}</span>
           </div>
         ) : null}
       </div>

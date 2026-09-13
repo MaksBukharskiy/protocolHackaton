@@ -7,14 +7,14 @@ export function PeerCard({ peer }: { peer: Peer }) {
   return (
     <Link
       to={`/peer/${peer.id}`}
-      className="block rounded-2xl border border-line bg-panel p-5 transition hover:border-lime/60"
+      className="block rounded-2xl border border-line bg-panel p-5 transition hover:border-accent/70"
     >
       <div className="flex items-start gap-3">
         <Avatar id={peer.id} nickname={peer.nickname} />
         <div className="min-w-0">
-          <p className="font-mono text-sm text-lime">{peer.nickname}</p>
+          <p className="text-sm text-accent">{peer.nickname}</p>
           <p className="truncate text-lg font-semibold">{peer.name}</p>
-          <p className="mt-1 font-mono text-[11px] text-mute">
+          <p className="mt-1 text-[11px] text-mute">
             {peer.campus} · {peer.cohort}
           </p>
         </div>
@@ -30,9 +30,7 @@ export function PeerCard({ peer }: { peer: Peer }) {
           <Chip key={skill}>{skill}</Chip>
         ))}
       </div>
-      <p className="mt-4 font-mono text-[11px] uppercase tracking-wider text-mute">
-        {LOOKING_LABEL[peer.lookingFor]}
-      </p>
+      <p className="mt-4 text-[11px] uppercase tracking-wider text-mute">{LOOKING_LABEL[peer.lookingFor]}</p>
     </Link>
   )
 }
