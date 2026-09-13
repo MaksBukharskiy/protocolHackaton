@@ -1,6 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom"
 import { Layout } from "./components/Layout"
 import { AnalyticsPage } from "./pages/Analytics"
+import { BadgesPage } from "./pages/Badges"
 import { EditProfilePage } from "./pages/EditProfile"
 import { FeedPage } from "./pages/Feed"
 import { LoginPage } from "./pages/Login"
@@ -24,6 +25,7 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/" element={<FeedPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/badges" element={<BadgesPage />} />
             <Route path="/onepagers" element={<OnePagersPage />} />
             <Route path="/people" element={<PeoplePage />} />
             <Route path="/project/:id" element={<ProjectPage />} />

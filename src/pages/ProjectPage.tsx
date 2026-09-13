@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
+import { BadgeRow } from "../components/Badge"
 import { Avatar, AccessDenied, Empty, FieldLabel, inputClass } from "../components/ui"
+import { badgesFor, isBadgeEarned } from "../lib/badges"
 import { ROLE_LABEL, STATUS_LABEL } from "../lib/labels"
 import {
   canAccessProject,
-  canPreviewProject,
   currentModuleId,
   doneCount,
   isModuleDone,
@@ -27,7 +28,6 @@ export function ProjectPage() {
     peerById,
     saveAnswer,
     updateProject,
-    toggleInterest,
     acceptMember,
     rejectInterest,
     addComment,
@@ -71,9 +71,8 @@ export function ProjectPage() {
   }
 
   const fullAccess = canAccessProject(project, currentUser.id, isModerator)
-  const previewOk = canPreviewProject(project, currentUser.id, isModerator)
 
-  if (!previewOk) {
+  if (!fullAccess) {
     return (
       <div className="-mx-4 -my-8 grid min-h-[calc(100dvh)] place-items-center bg-ink sm:-mx-8">
         <AccessDenied />
@@ -85,7 +84,6 @@ export function ProjectPage() {
   const isMember = board.memberIds.includes(currentUser.id)
   const canEdit = fullAccess && isMember && !isModerator
   const canModerateJoin = isModerator || board.ownerId === currentUser.id
-  const interested = board.interestIds.includes(currentUser.id)
   const module = modules.find((item) => item.id === selected) ?? modules[0]
   const done = doneCount(board, modules)
   const moduleIndex = module ? modules.findIndex((step) => step.id === module.id) : -1
@@ -123,55 +121,6 @@ export function ProjectPage() {
 
   const comments = board.comments ?? []
 
-  // Публичный просмотр: заявка в команду, без модулей
-  if (!fullAccess) {
-    return (
-      <div className="mx-auto max-w-2xl">
-        <Link to="/" className="text-xs text-mute hover:text-white">
-          ← назад
-        </Link>
-        <p className="mt-4 text-xs uppercase tracking-wider text-accent">{STATUS_LABEL[project.status]}</p>
-        <p className="mt-2 text-sm text-mute">{project.teamName}</p>
-        <h1 className="mt-1 text-4xl font-semibold tracking-tight">{project.title}</h1>
-        <p className="mt-3 text-lg text-mute">{project.pitch}</p>
-
-        <div className="mt-6 rounded-2xl border border-line bg-panel p-5">
-          <p className="text-xs uppercase tracking-wider text-mute">кого ищут</p>
-          <p className="mt-2 text-sm">
-            {project.neededRoles.map((role) => ROLE_LABEL[role]).join(", ") || "роль не указана"}
-          </p>
-          <p className="mt-4 text-xs uppercase tracking-wider text-mute">состав</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {project.memberIds.map((memberId) => {
-              const member = peerById(memberId)
-              if (!member) return null
-              return (
-                <div key={member.id} className="flex items-center gap-2 rounded-full border border-line px-3 py-1.5">
-                  <Avatar id={member.id} nickname={member.nickname} size="sm" />
-                  <span className="text-sm">
-                    {member.nickname}
-                    <span className="text-mute"> · {member.name}</span>
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => toggleInterest(project.id)}
-          className={`mt-6 rounded-full px-5 py-2.5 text-sm ${
-            interested ? "border border-line text-mute" : "bg-accent text-ink"
-          }`}
-        >
-          {interested ? "Отменить заявку" : "Хочу в команду"}
-        </button>
-        {interested ? <p className="mt-2 text-xs text-mute">Заявка отправлена. Жди решения владельца.</p> : null}
-      </div>
-    )
-  }
-
   return (
     <div className="mx-auto max-w-6xl">
       <Link to="/" className="text-xs text-mute hover:text-white">
@@ -197,6 +146,11 @@ export function ProjectPage() {
           </Link>
         </div>
       </div>
+
+      <section className="mt-6 rounded-2xl border border-line bg-panel p-5">
+        <p className="mb-4 text-xs uppercase tracking-wider text-mute">бейджи модулей</p>
+        <BadgeRow badges={badgesFor(modules).map((badge) => ({ badge, earned: isBadgeEarned(board, badge.id, modules) }))} />
+      </section>
 
       {fullAccess && isModerator && !isMember ? (
         <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel px-4 py-3">
@@ -242,7 +196,7 @@ export function ProjectPage() {
                 ))}
               </select>
               <p className="mt-1 text-[11px] text-mute">
-                «ищем в команду» — проект виден всем, можно принимать заявки
+                «ищем в команду» — модератор видит статус, заявки принимает владелец
               </p>
             </div>
             <div>

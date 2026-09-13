@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react"
 import { Link, Navigate, useParams } from "react-router-dom"
+import { BadgeRow } from "../components/Badge"
 import { Brand } from "../components/Logo"
 import { Avatar, AccessDenied, Empty, inputClass } from "../components/ui"
+import { badgesFor, isBadgeEarned } from "../lib/badges"
 import { STATUS_LABEL } from "../lib/labels"
 import { canAccessProject, doneCount, isComplete, isFieldFilled, moduleLines } from "../lib/modules"
 import { useStore } from "../store"
@@ -103,6 +105,15 @@ export function OnePagerPage() {
             <p className="mt-6 text-sm text-mute">{project.teamName}</p>
             <h1 className="mt-1 text-4xl font-semibold tracking-tight">{project.title}</h1>
             <p className="mt-4 text-lg leading-relaxed text-mute">{project.pitch}</p>
+
+            <div className="mt-6">
+              <BadgeRow
+                badges={badgesFor(modules).map((badge) => ({
+                  badge,
+                  earned: isBadgeEarned(project, badge.id, modules),
+                }))}
+              />
+            </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
               {members.map((member) => (

@@ -17,10 +17,13 @@ function wait(ms: number) {
 
 export function ScoutPage() {
   const { peers, projects, currentUser, isModerator, modules } = useStore()
-  const ctx = useMemo(
-    () => (currentUser ? { peers, projects, me: currentUser, isModerator, modules } : null),
-    [currentUser, isModerator, modules, peers, projects],
-  )
+  const ctx = useMemo(() => {
+    if (!currentUser) return null
+    const scoped = isModerator
+      ? projects
+      : projects.filter((project) => project.memberIds.includes(currentUser.id) || project.ownerId === currentUser.id)
+    return { peers, projects: scoped, me: currentUser, isModerator, modules }
+  }, [currentUser, isModerator, modules, peers, projects])
   const [messages, setMessages] = useState<Msg[]>([])
   const [text, setText] = useState("")
   const [busy, setBusy] = useState(false)
