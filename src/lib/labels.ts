@@ -12,7 +12,7 @@ export const ROLE_LABEL: Record<Role, string> = {
 export const STATUS_LABEL: Record<ProjectStatus, string> = {
   idea: "идея",
   building: "в работе",
-  looking: "ищем команду",
+  looking: "ищем в команду",
 }
 
 export const ACCESS_LABEL: Record<AccessRole, string> = {

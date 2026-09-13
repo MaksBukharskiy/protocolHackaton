@@ -65,7 +65,7 @@ export function NewProjectPage() {
             className={inputClass()}
             value={roster}
             onChange={(e) => setRoster(e.target.value)}
-            placeholder="akostyl, mivanov"
+            placeholder="nilufer, bekzodj"
           />
         </div>
         <div>

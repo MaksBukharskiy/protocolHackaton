@@ -12,21 +12,35 @@ export function FeedPage() {
     ? projects
     : projects.filter((project) => project.memberIds.includes(currentUser.id) || project.ownerId === currentUser.id)
 
+  const openRoles = isModerator
+    ? []
+    : projects.filter(
+        (project) =>
+          project.status === "looking" &&
+          !project.memberIds.includes(currentUser.id) &&
+          project.ownerId !== currentUser.id,
+      )
+
   return (
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight">{isModerator ? "Команды" : "Проект"}</h1>
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">{isModerator ? "Команды" : "Мой проект"}</h1>
+          {!isModerator ? (
+            <p className="mt-1 text-sm text-mute">Модули, one-pager и набор в команду.</p>
+          ) : null}
+        </div>
         <Link
           to={isModerator ? "/moderate" : "/new"}
           className="rounded-full bg-accent px-4 py-2 text-sm text-ink hover:brightness-110"
         >
-          {isModerator ? "Модерация" : "Создать"}
+          {isModerator ? "Модерация" : "Создать проект"}
         </Link>
       </div>
 
       {mine.length === 0 ? (
         <div className="mt-8">
-          <Empty title="Пусто" hint="Создай проект." />
+          <Empty title="Пока нет своего проекта" hint="Создай проект или откликнись на открытый набор ниже." />
         </div>
       ) : (
         <div className="mt-8 grid gap-4 md:grid-cols-2">
@@ -34,12 +48,30 @@ export function FeedPage() {
             <div key={project.id}>
               <ProjectCard project={project} />
               <p className="mt-2 px-1 text-xs text-mute">
-                {doneCount(project)}/{MODULES.length}
+                модули {doneCount(project)}/{MODULES.length}
               </p>
             </div>
           ))}
         </div>
       )}
+
+      {!isModerator ? (
+        <section className="mt-12">
+          <h2 className="text-xl font-semibold tracking-tight">Ищем в команду</h2>
+          <p className="mt-1 text-sm text-mute">Открытые проекты — можно подать заявку.</p>
+          {openRoles.length === 0 ? (
+            <div className="mt-6">
+              <Empty title="Сейчас никто не набирает" hint="Когда проект поставит статус «ищем в команду», он появится здесь." />
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              {openRoles.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
     </div>
   )
 }

@@ -5,8 +5,10 @@ import { useStore } from "../store"
 
 type Mode = "login" | "register"
 
+const CAMPUSES = ["Ташкент", "Самарканд"] as const
+
 const fieldClass =
-  "mt-1.5 w-full rounded-full border border-line bg-ink px-4 py-3 text-sm outline-none focus:border-accent"
+  "mt-1.5 w-full rounded-xl border border-line bg-ink px-4 py-3 text-sm outline-none focus:border-accent"
 
 export function LoginPage() {
   const { login, logout, verify, register, resetDemo } = useStore()
@@ -14,7 +16,7 @@ export function LoginPage() {
   const [mode, setMode] = useState<Mode>("login")
   const [nickname, setNickname] = useState("")
   const [name, setName] = useState("")
-  const [campus, setCampus] = useState("Москва")
+  const [campus, setCampus] = useState<(typeof CAMPUSES)[number]>("Ташкент")
   const [password, setPassword] = useState("")
   const [confirm, setConfirm] = useState("")
   const [error, setError] = useState("")
@@ -24,6 +26,13 @@ export function LoginPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  function fillDemo(nick: string) {
+    setMode("login")
+    setNickname(nick)
+    setPassword("21")
+    setError("")
+  }
+
   function onSubmit(e: FormEvent) {
     e.preventDefault()
     setError("")
@@ -31,7 +40,7 @@ export function LoginPage() {
     if (mode === "login") {
       const peer = verify(nickname, password)
       if (!peer) {
-        setError("Неверный логин или пароль")
+        setError("Неверный ник или пароль")
         return
       }
       login(peer.id)
@@ -40,11 +49,11 @@ export function LoginPage() {
     }
 
     if (!/^[a-z0-9_]{3,16}$/i.test(nickname.trim())) {
-      setError("Логин: 3–16 символов")
+      setError("Ник Intra: 3–16 символов, латиница и цифры")
       return
     }
     if (!name.trim()) {
-      setError("Укажи имя")
+      setError("Укажи ФИО отдельно от ника")
       return
     }
     if (password.length < 2) {
@@ -57,7 +66,7 @@ export function LoginPage() {
     }
     const id = register({ nickname, name, campus, password })
     if (!id) {
-      setError("Логин занят")
+      setError("Такой ник уже занят")
       return
     }
     navigate("/", { replace: true })
@@ -67,7 +76,7 @@ export function LoginPage() {
     <div className="grid min-h-dvh lg:grid-cols-[calc(50%-150px)_1fr]">
       <section className="relative hidden overflow-hidden bg-accent lg:block">
         <div
-            className="absolute inset-0 opacity-12"
+          className="absolute inset-0 opacity-12"
           style={{
             backgroundImage:
               "linear-gradient(#0a0a0a 1px, transparent 1px), linear-gradient(90deg, #0a0a0a 1px, transparent 1px)",
@@ -99,16 +108,17 @@ export function LoginPage() {
         <div className="logo-pulse absolute left-1/2 top-1/2 grid size-40 place-items-center rounded-full bg-ink">
           <Mark className="mark-pulse size-[5.25rem]" />
         </div>
-
         <div className="absolute bottom-10 left-10 text-ink">
           <p className="text-4xl font-semibold tracking-tight">protocol</p>
+          <p className="mt-2 max-w-xs text-sm text-ink/70">Launch Lab 21 · Ташкент и Самарканд</p>
         </div>
       </section>
 
       <section className="flex items-center justify-center bg-ink px-4 py-10">
-        <div className="w-full max-w-[calc(28rem+35px)] rounded-3xl border border-line bg-panel px-6 py-[calc(1.5rem+5px)] sm:px-8 sm:py-[calc(2rem+5px)]">
-          <div className="mb-8">
+        <div className="w-full max-w-[calc(28rem+35px)] rounded-3xl border border-line bg-panel px-6 py-8 sm:px-8">
+          <div className="mb-6">
             <Brand markClass="size-10" textClass="text-2xl" to="/" />
+            <p className="mt-3 text-sm text-mute">Войди по нику Intra. ФИО — отдельное поле при регистрации.</p>
           </div>
 
           <div className="grid grid-cols-2 rounded-full bg-ink p-1">
@@ -130,53 +140,99 @@ export function LoginPage() {
           <form onSubmit={onSubmit} className="mt-6 space-y-3">
             {mode === "register" ? (
               <>
-                <input className={fieldClass} value={name} onChange={(e) => setName(e.target.value)} placeholder="Имя" />
-                <input
-                  className={fieldClass}
-                  value={campus}
-                  onChange={(e) => setCampus(e.target.value)}
-                  placeholder="Кампус"
-                />
+                <label className="block text-xs text-mute">
+                  ФИО
+                  <input
+                    className={fieldClass}
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Азиз Рахимов"
+                    autoComplete="name"
+                  />
+                </label>
+                <label className="block text-xs text-mute">
+                  Кампус
+                  <select
+                    className={fieldClass}
+                    value={campus}
+                    onChange={(e) => setCampus(e.target.value as (typeof CAMPUSES)[number])}
+                  >
+                    {CAMPUSES.map((item) => (
+                      <option key={item} value={item}>
+                        {item}
+                      </option>
+                    ))}
+                  </select>
+                </label>
               </>
             ) : null}
-            <input
-              className={fieldClass}
-              value={nickname}
-              onChange={(e) => setNickname(e.target.value)}
-              autoComplete="username"
-              placeholder="Логин"
-            />
-            <input
-              type="password"
-              className={fieldClass}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete={mode === "login" ? "current-password" : "new-password"}
-              placeholder="Пароль"
-            />
-            {mode === "register" ? (
+
+            <label className="block text-xs text-mute">
+              Ник Intra
+              <input
+                className={fieldClass}
+                value={nickname}
+                onChange={(e) => setNickname(e.target.value)}
+                autoComplete="username"
+                placeholder="stockcol"
+              />
+            </label>
+            <label className="block text-xs text-mute">
+              Пароль
               <input
                 type="password"
                 className={fieldClass}
-                value={confirm}
-                onChange={(e) => setConfirm(e.target.value)}
-                autoComplete="new-password"
-                placeholder="Повтор пароля"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete={mode === "login" ? "current-password" : "new-password"}
+                placeholder="••••"
               />
+            </label>
+            {mode === "register" ? (
+              <label className="block text-xs text-mute">
+                Повтор пароля
+                <input
+                  type="password"
+                  className={fieldClass}
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  autoComplete="new-password"
+                  placeholder="••••"
+                />
+              </label>
             ) : null}
 
             {error ? <p className="text-sm text-accent">{error}</p> : null}
 
             <button type="submit" className="w-full rounded-full bg-accent py-3 text-sm font-medium text-ink">
-              {mode === "login" ? "Войти" : "Создать"}
+              {mode === "login" ? "Войти" : "Создать аккаунт"}
             </button>
           </form>
 
-          <p className="mt-5 text-center text-xs text-mute">
-            участник: stockcol / 21 · модератор: labmod / 21
-            <br />
-            <button type="button" onClick={resetDemo} className="mt-1 hover:text-white">
-              сброс демо
+          <div className="mt-5 rounded-2xl border border-line bg-ink/50 p-3">
+            <p className="text-[11px] uppercase tracking-wider text-mute">быстрый демо-вход</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => fillDemo("stockcol")}
+                className="rounded-full border border-line px-3 py-1.5 text-xs hover:border-accent"
+              >
+                stockcol · участник
+              </button>
+              <button
+                type="button"
+                onClick={() => fillDemo("labmod")}
+                className="rounded-full border border-line px-3 py-1.5 text-xs hover:border-accent"
+              >
+                labmod · модератор
+              </button>
+            </div>
+            <p className="mt-2 text-xs text-mute">пароль для сидов: 21 · роль берётся из аккаунта</p>
+          </div>
+
+          <p className="mt-4 text-center text-xs text-mute">
+            <button type="button" onClick={resetDemo} className="hover:text-white">
+              сбросить демо-данные
             </button>
           </p>
         </div>

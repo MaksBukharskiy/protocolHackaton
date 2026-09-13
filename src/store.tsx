@@ -27,10 +27,14 @@ type Store = {
   logout: () => void
   updatePeer: (peerId: string, patch: Partial<Peer>) => void
   createProject: (input: Omit<Project, "id" | "ownerId" | "memberIds" | "interestIds" | "answers" | "pagerNote"> & { extraMembers?: string[] }) => string
-  updateProject: (projectId: string, patch: Partial<Pick<Project, "title" | "teamName" | "pitch" | "pagerNote">>) => void
+  updateProject: (
+    projectId: string,
+    patch: Partial<Pick<Project, "title" | "teamName" | "pitch" | "pagerNote" | "status" | "neededRoles" | "stack">>,
+  ) => void
   saveAnswer: (projectId: string, moduleId: ModuleId, fields: Record<string, string>) => void
   toggleInterest: (projectId: string) => void
   acceptMember: (projectId: string, peerId: string) => void
+  rejectInterest: (projectId: string, peerId: string) => void
   resetDemo: () => void
   peerById: (id: string) => Peer | undefined
 }
@@ -161,24 +165,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       updateProject: (projectId, patch) => {
         const me = state.currentUserId
-        const moderator = state.currentRole === "moderator"
         commit({
           ...state,
           projects: state.projects.map((project) => {
             if (project.id !== projectId) return project
-            if (!me || (!moderator && project.ownerId !== me && !project.memberIds.includes(me))) return project
+            // Только команда правит профиль. Модератор — только смотрит.
+            if (!me || (project.ownerId !== me && !project.memberIds.includes(me))) return project
             return { ...project, ...patch }
           }),
         })
       },
       saveAnswer: (projectId, moduleId, fields) => {
         const me = state.currentUserId
-        const moderator = state.currentRole === "moderator"
         commit({
           ...state,
           projects: state.projects.map((project) => {
             if (project.id !== projectId) return project
-            if (!me || (!moderator && !project.memberIds.includes(me))) return project
+            // Ответы модулей пишет только команда.
+            if (!me || !project.memberIds.includes(me)) return project
             return {
               ...project,
               answers: { ...project.answers, [moduleId]: fields },
@@ -217,6 +221,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               memberIds: project.memberIds.includes(peerId)
                 ? project.memberIds
                 : [...project.memberIds, peerId],
+              interestIds: project.interestIds.filter((id) => id !== peerId),
+            }
+          }),
+        })
+      },
+      rejectInterest: (projectId, peerId) => {
+        const me = state.currentUserId
+        const moderator = state.currentRole === "moderator"
+        commit({
+          ...state,
+          projects: state.projects.map((project) => {
+            if (project.id !== projectId) return project
+            if (!moderator && project.ownerId !== me) return project
+            return {
+              ...project,
               interestIds: project.interestIds.filter((id) => id !== peerId),
             }
           }),

@@ -26,7 +26,7 @@ export function OnePagerPage() {
   const board = project
   const members = board.memberIds.map((memberId) => peerById(memberId)).filter(Boolean)
   const ready = isComplete(board)
-  const canEdit = board.memberIds.includes(currentUser.id) || isModerator
+  const canEdit = board.memberIds.includes(currentUser.id) && !isModerator
 
   function onSaveNote() {
     updateProject(board.id, { pagerNote: note.trim() })

@@ -152,3 +152,10 @@ export function canAccessProject(project: Project, userId: string | undefined, i
   if (!userId) return false
   return project.memberIds.includes(userId) || project.ownerId === userId
 }
+
+/** Публичный просмотр для заявки в команду (без ответов модулей). */
+export function canPreviewProject(project: Project, userId: string | undefined, isModerator: boolean) {
+  if (canAccessProject(project, userId, isModerator)) return true
+  if (!userId) return false
+  return project.status === "looking"
+}

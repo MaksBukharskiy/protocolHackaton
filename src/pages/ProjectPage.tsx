@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
 import { Link, useParams, useSearchParams } from "react-router-dom"
 import { Avatar, Empty, FieldLabel, inputClass } from "../components/ui"
+import { ROLE_LABEL, STATUS_LABEL } from "../lib/labels"
 import {
   canAccessProject,
+  canPreviewProject,
   currentModuleId,
   doneCount,
   isModuleDone,
@@ -10,12 +12,26 @@ import {
   MODULES,
 } from "../lib/modules"
 import { useStore } from "../store"
-import type { ModuleId } from "../types"
+import { PROJECT_STATUSES, ROLES, type ModuleId, type ProjectStatus, type Role } from "../types"
+
+function toggleRole(roles: Role[], role: Role) {
+  return roles.includes(role) ? roles.filter((item) => item !== role) : [...roles, role]
+}
 
 export function ProjectPage() {
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
-  const { projects, currentUser, isModerator, peerById, saveAnswer, updateProject } = useStore()
+  const {
+    projects,
+    currentUser,
+    isModerator,
+    peerById,
+    saveAnswer,
+    updateProject,
+    toggleInterest,
+    acceptMember,
+    rejectInterest,
+  } = useStore()
   const project = projects.find((item) => item.id === id)
   const requested = params.get("m") as ModuleId | null
   const canOpen = (moduleId: ModuleId) => Boolean(project && (isModerator || isUnlocked(project, moduleId)))
@@ -30,6 +46,8 @@ export function ProjectPage() {
   const [title, setTitle] = useState("")
   const [teamName, setTeamName] = useState("")
   const [pitch, setPitch] = useState("")
+  const [status, setStatus] = useState<ProjectStatus>("idea")
+  const [neededRoles, setNeededRoles] = useState<Role[]>([])
 
   useEffect(() => {
     setDraft(project?.answers[selected] ?? {})
@@ -41,18 +59,26 @@ export function ProjectPage() {
     setTitle(project.title)
     setTeamName(project.teamName)
     setPitch(project.pitch)
+    setStatus(project.status)
+    setNeededRoles(project.neededRoles)
   }, [project])
 
   if (!project || !currentUser) {
-    return <Empty title="Проект не найден" hint="Создай свой или открой свой из обзора." />
+    return <Empty title="Проект не найден" hint="Создай свой или открой из обзора." />
   }
 
-  if (!canAccessProject(project, currentUser.id, isModerator)) {
-    return <Empty title="Закрыто" />
+  const fullAccess = canAccessProject(project, currentUser.id, isModerator)
+  const previewOk = canPreviewProject(project, currentUser.id, isModerator)
+
+  if (!previewOk) {
+    return <Empty title="Закрыто" hint="Этот проект не набирает команду и недоступен посторонним." />
   }
 
   const board = project
-  const canEdit = board.memberIds.includes(currentUser.id) || isModerator
+  const isMember = board.memberIds.includes(currentUser.id)
+  const canEdit = fullAccess && isMember && !isModerator
+  const canModerateJoin = isModerator || board.ownerId === currentUser.id
+  const interested = board.interestIds.includes(currentUser.id)
   const module = MODULES.find((item) => item.id === selected) ?? MODULES[0]
   const done = doneCount(board)
   const nextModule = MODULES.find(
@@ -70,7 +96,62 @@ export function ProjectPage() {
   }
 
   function onSaveProfile() {
-    updateProject(board.id, { title: title.trim(), teamName: teamName.trim(), pitch: pitch.trim() })
+    updateProject(board.id, {
+      title: title.trim(),
+      teamName: teamName.trim(),
+      pitch: pitch.trim(),
+      status,
+      neededRoles,
+    })
+  }
+
+  // Публичный просмотр: заявка в команду, без модулей
+  if (!fullAccess) {
+    return (
+      <div className="mx-auto max-w-2xl">
+        <Link to="/" className="text-xs text-mute hover:text-white">
+          ← назад
+        </Link>
+        <p className="mt-4 text-xs uppercase tracking-wider text-accent">{STATUS_LABEL[project.status]}</p>
+        <p className="mt-2 text-sm text-mute">{project.teamName}</p>
+        <h1 className="mt-1 text-4xl font-semibold tracking-tight">{project.title}</h1>
+        <p className="mt-3 text-lg text-mute">{project.pitch}</p>
+
+        <div className="mt-6 rounded-2xl border border-line bg-panel p-5">
+          <p className="text-xs uppercase tracking-wider text-mute">кого ищут</p>
+          <p className="mt-2 text-sm">
+            {project.neededRoles.map((role) => ROLE_LABEL[role]).join(", ") || "роль не указана"}
+          </p>
+          <p className="mt-4 text-xs uppercase tracking-wider text-mute">состав</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {project.memberIds.map((memberId) => {
+              const member = peerById(memberId)
+              if (!member) return null
+              return (
+                <div key={member.id} className="flex items-center gap-2 rounded-full border border-line px-3 py-1.5">
+                  <Avatar id={member.id} nickname={member.nickname} size="sm" />
+                  <span className="text-sm">
+                    {member.nickname}
+                    <span className="text-mute"> · {member.name}</span>
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => toggleInterest(project.id)}
+          className={`mt-6 rounded-full px-5 py-2.5 text-sm ${
+            interested ? "border border-line text-mute" : "bg-accent text-ink"
+          }`}
+        >
+          {interested ? "Отменить заявку" : "Хочу в команду"}
+        </button>
+        {interested ? <p className="mt-2 text-xs text-mute">Заявка отправлена. Жди решения владельца.</p> : null}
+      </div>
+    )
   }
 
   return (
@@ -81,7 +162,8 @@ export function ProjectPage() {
 
       <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-xs text-mute">{project.teamName}</p>
+          <p className="text-xs text-accent">{STATUS_LABEL[project.status]}</p>
+          <p className="mt-1 text-xs text-mute">{project.teamName}</p>
           <h1 className="mt-1 text-4xl font-semibold tracking-tight">{project.title}</h1>
           <p className="mt-2 max-w-2xl text-mute">{project.pitch}</p>
         </div>
@@ -97,6 +179,12 @@ export function ProjectPage() {
           </Link>
         </div>
       </div>
+
+      {fullAccess && isModerator && !isMember ? (
+        <p className="mt-4 rounded-2xl border border-line bg-panel px-4 py-3 text-sm text-mute">
+          Режим модератора: только просмотр и approve/reject заявок. Название, описание и модули правит команда.
+        </p>
+      ) : null}
 
       {canEdit ? (
         <section className="mt-6 rounded-2xl border border-line bg-panel p-5">
@@ -115,16 +203,88 @@ export function ProjectPage() {
             <FieldLabel>краткое описание</FieldLabel>
             <textarea className={`${inputClass()} min-h-20`} value={pitch} onChange={(e) => setPitch(e.target.value)} />
           </div>
-          <p className="mt-3 text-xs text-mute">
-            состав:{" "}
-            {project.memberIds
-              .map((memberId) => peerById(memberId)?.nickname)
-              .filter(Boolean)
-              .join(", ")}
-          </p>
-          <button type="button" onClick={onSaveProfile} className="mt-3 text-sm text-accent">
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <div>
+              <FieldLabel>статус набора</FieldLabel>
+              <select
+                className={inputClass()}
+                value={status}
+                onChange={(e) => setStatus(e.target.value as ProjectStatus)}
+              >
+                {PROJECT_STATUSES.map((item) => (
+                  <option key={item} value={item}>
+                    {STATUS_LABEL[item]}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-mute">
+                «ищем в команду» — проект виден всем, можно принимать заявки
+              </p>
+            </div>
+            <div>
+              <FieldLabel>кого ищем</FieldLabel>
+              <div className="mt-1 flex flex-wrap gap-2">
+                {ROLES.map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setNeededRoles(toggleRole(neededRoles, role))}
+                    className={`rounded-full border px-3 py-1 text-xs ${
+                      neededRoles.includes(role) ? "border-accent bg-accent text-ink" : "border-line text-mute"
+                    }`}
+                  >
+                    {ROLE_LABEL[role]}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <button type="button" onClick={onSaveProfile} className="mt-4 text-sm text-accent">
             Сохранить профиль
           </button>
+        </section>
+      ) : null}
+
+      {canModerateJoin && project.interestIds.length > 0 ? (
+        <section className="mt-6 rounded-2xl border border-accent/40 bg-panel p-5">
+          <p className="text-xs uppercase tracking-wider text-accent">
+            {isModerator ? "заявки · approve / reject" : "заявки в команду"}
+          </p>
+          <div className="mt-3 grid gap-3">
+            {project.interestIds.map((peerId) => {
+              const peer = peerById(peerId)
+              if (!peer) return null
+              return (
+                <div key={peer.id} className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Avatar id={peer.id} nickname={peer.nickname} size="sm" />
+                    <div>
+                      <p className="text-sm">{peer.nickname}</p>
+                      <p className="text-xs text-mute">
+                        {peer.name} · {peer.campus}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => acceptMember(project.id, peer.id)}
+                      className="rounded-full bg-accent px-3 py-1.5 text-xs text-ink"
+                    >
+                      Принять
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => rejectInterest(project.id, peer.id)}
+                      className="rounded-full border border-line px-3 py-1.5 text-xs text-mute"
+                    >
+                      Отклонить
+                    </button>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </section>
       ) : null}
 
@@ -236,7 +396,10 @@ export function ProjectPage() {
             return (
               <div key={member.id} className="flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1.5">
                 <Avatar id={member.id} nickname={member.nickname} size="sm" />
-                <span className="text-sm">{member.nickname}</span>
+                <span className="text-sm">
+                  {member.nickname}
+                  <span className="text-mute"> · {member.name}</span>
+                </span>
               </div>
             )
           })}
