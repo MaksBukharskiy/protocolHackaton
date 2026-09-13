@@ -2,7 +2,7 @@ import { emptyAnswers, fillModule } from "../lib/modules"
 import type { Peer, Project } from "../types"
 
 export const STORAGE_KEY = "launchlab21"
-export const STORAGE_VERSION = 8
+export const STORAGE_VERSION = 9
 
 export const peers: Peer[] = [
   {
@@ -176,6 +176,20 @@ export const projects: Project[] = [
     memberIds: ["dilnoza", "madinaml"],
     interestIds: ["sarvinoz"],
     pagerNote: "Ищем фронтенд до демо-дня Launch Lab 21.",
+    comments: [
+      {
+        id: "c-intramatch-1",
+        authorId: "labmod",
+        text: "Сильный wedge. До демо-дня зафиксируйте метрику «3 команды» в one-pager — без неё ask звучит абстрактно.",
+        createdAt: "2026-09-10T10:15:00.000Z",
+      },
+      {
+        id: "c-intramatch-2",
+        authorId: "labmod",
+        text: "По заявке sarvinoz: фронт закрывает слот. Примите или уточните стек в ask.",
+        createdAt: "2026-09-12T14:40:00.000Z",
+      },
+    ],
     answers: {
       problem: fillModule("problem", {
         pain: "Команды собираются в случайных чатах и разваливаются на третьей неделе.",
@@ -221,6 +235,7 @@ export const projects: Project[] = [
     memberIds: ["stockcol"],
     interestIds: ["nilufer"],
     pagerNote: "",
+    comments: [],
     answers: {
       ...emptyAnswers(),
       problem: fillModule("problem", {
@@ -247,6 +262,7 @@ export const projects: Project[] = [
     memberIds: ["bekzodj", "umarfull"],
     interestIds: [],
     pagerNote: "",
+    comments: [],
     answers: {
       ...emptyAnswers(),
       problem: fillModule("problem", {
@@ -268,6 +284,7 @@ export const projects: Project[] = [
     memberIds: ["gulruh"],
     interestIds: [],
     pagerNote: "",
+    comments: [],
     answers: emptyAnswers(),
   },
   {
@@ -282,6 +299,7 @@ export const projects: Project[] = [
     memberIds: ["sevinch", "lazizdev"],
     interestIds: ["jasurmob"],
     pagerNote: "",
+    comments: [],
     answers: {
       ...emptyAnswers(),
       problem: fillModule("problem", {
@@ -313,6 +331,7 @@ export const projects: Project[] = [
     memberIds: ["jasurmob"],
     interestIds: [],
     pagerNote: "",
+    comments: [],
     answers: emptyAnswers(),
   },
   {
@@ -327,6 +346,14 @@ export const projects: Project[] = [
     memberIds: ["oybekcv"],
     interestIds: ["stockcol"],
     pagerNote: "Нужен фронтенд и упаковка онбординга.",
+    comments: [
+      {
+        id: "c-mentora-1",
+        authorId: "labmod",
+        text: "Пилот на 8 слотах — хорошо. Добавьте в next, кто из менторов уже согласился.",
+        createdAt: "2026-09-11T09:00:00.000Z",
+      },
+    ],
     answers: {
       problem: fillModule("problem", {
         pain: "Менторство = «напиши в личку».",
@@ -372,6 +399,7 @@ export const projects: Project[] = [
     memberIds: ["lazizdev"],
     interestIds: [],
     pagerNote: "",
+    comments: [],
     answers: emptyAnswers(),
   },
 ]

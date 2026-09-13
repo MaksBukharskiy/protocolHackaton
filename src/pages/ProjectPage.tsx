@@ -30,6 +30,7 @@ export function ProjectPage() {
     toggleInterest,
     acceptMember,
     rejectInterest,
+    addComment,
     modules,
   } = useStore()
   const project = projects.find((item) => item.id === id)
@@ -49,6 +50,7 @@ export function ProjectPage() {
   const [pitch, setPitch] = useState("")
   const [status, setStatus] = useState<ProjectStatus>("idea")
   const [neededRoles, setNeededRoles] = useState<Role[]>([])
+  const [commentDraft, setCommentDraft] = useState("")
 
   useEffect(() => {
     setDraft(project?.answers[selected] ?? {})
@@ -111,6 +113,15 @@ export function ProjectPage() {
       neededRoles,
     })
   }
+
+  function onAddComment() {
+    const text = commentDraft.trim()
+    if (!text) return
+    addComment(board.id, text)
+    setCommentDraft("")
+  }
+
+  const comments = board.comments ?? []
 
   // Публичный просмотр: заявка в команду, без модулей
   if (!fullAccess) {
@@ -298,6 +309,66 @@ export function ProjectPage() {
           </div>
         </section>
       ) : null}
+
+      {(comments.length > 0 || isModerator) && (
+        <section className="mt-6 rounded-2xl border border-line bg-panel p-5">
+          <div className="flex items-baseline justify-between gap-3">
+            <p className="text-xs uppercase tracking-wider text-mute">комментарии</p>
+            {comments.length > 0 ? <p className="text-xs text-mute">{comments.length}</p> : null}
+          </div>
+
+          {comments.length > 0 ? (
+            <div className="mt-4 grid gap-4">
+              {comments.map((comment) => {
+                const author = peerById(comment.authorId)
+                return (
+                  <div key={comment.id} className="border-t border-line pt-4 first:border-t-0 first:pt-0">
+                    <div className="flex items-center gap-2">
+                      {author ? <Avatar id={author.id} nickname={author.nickname} size="sm" /> : null}
+                      <div className="min-w-0">
+                        <p className="text-sm">
+                          {author?.nickname ?? comment.authorId}
+                          <span className="text-mute"> · модератор</span>
+                        </p>
+                        <p className="text-[11px] text-mute">
+                          {new Date(comment.createdAt).toLocaleString("ru-RU", {
+                            day: "numeric",
+                            month: "short",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-white/90">{comment.text}</p>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <p className="mt-3 text-sm text-mute">Пока пусто</p>
+          )}
+
+          {isModerator ? (
+            <div className="mt-4 border-t border-line pt-4">
+              <textarea
+                className={`${inputClass()} min-h-20`}
+                value={commentDraft}
+                placeholder="Комментарий команде…"
+                onChange={(e) => setCommentDraft(e.target.value)}
+              />
+              <button
+                type="button"
+                disabled={!commentDraft.trim()}
+                onClick={onAddComment}
+                className="mt-3 rounded-full bg-accent px-4 py-2 text-sm text-ink hover:brightness-110 disabled:opacity-40"
+              >
+                Отправить
+              </button>
+            </div>
+          ) : null}
+        </section>
+      )}
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[16rem_1fr]">
         <ol className="flex flex-col">

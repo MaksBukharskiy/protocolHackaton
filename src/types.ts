@@ -50,6 +50,13 @@ export type ModuleDef = {
   fields: TemplateField[]
 }
 
+export type ProjectComment = {
+  id: string
+  authorId: string
+  text: string
+  createdAt: string
+}
+
 export type Project = {
   id: string
   ownerId: string
@@ -63,6 +70,7 @@ export type Project = {
   interestIds: string[]
   answers: Record<string, Record<string, string>>
   pagerNote: string
+  comments: ProjectComment[]
 }
 
 export type AppState = {

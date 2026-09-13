@@ -181,6 +181,7 @@ export function ModeratePage() {
           <div className="grid gap-3">
             {rows.map(({ project, owner, done, current, complete, pending }) => {
               const pct = Math.round((done / moduleTotal) * 100)
+              const commentCount = project.comments?.length ?? 0
               return (
                 <article
                   key={project.id}
@@ -198,6 +199,11 @@ export function ModeratePage() {
                         {pending > 0 ? (
                           <span className="rounded-full border border-accent/40 px-2 py-0.5 text-[10px] uppercase tracking-wider text-accent">
                             {pending} заявк{pending === 1 ? "а" : pending < 5 ? "и" : "ок"}
+                          </span>
+                        ) : null}
+                        {commentCount > 0 ? (
+                          <span className="rounded-full border border-line px-2 py-0.5 text-[10px] uppercase tracking-wider text-mute">
+                            {commentCount} коммент.
                           </span>
                         ) : null}
                       </div>
@@ -228,6 +234,11 @@ export function ModeratePage() {
                       <span>{owner?.campus ?? "—"}</span>
                       <span className="truncate">сейчас: {current?.title ?? "—"}</span>
                     </div>
+                    {commentCount > 0 ? (
+                      <p className="mt-2 line-clamp-2 text-sm text-mute">
+                        {project.comments[commentCount - 1]?.text}
+                      </p>
+                    ) : null}
                     <div className="mt-3">
                       <div className="mb-1.5 flex items-center justify-between text-xs">
                         <span className="text-mute">модули</span>

@@ -28,7 +28,10 @@ type Store = {
   logout: () => void
   updatePeer: (peerId: string, patch: Partial<Peer>) => void
   createProject: (
-    input: Omit<Project, "id" | "ownerId" | "memberIds" | "interestIds" | "answers" | "pagerNote"> & {
+    input: Omit<
+      Project,
+      "id" | "ownerId" | "memberIds" | "interestIds" | "answers" | "pagerNote" | "comments"
+    > & {
       extraMembers?: string[]
     },
   ) => string
@@ -40,6 +43,7 @@ type Store = {
   toggleInterest: (projectId: string) => void
   acceptMember: (projectId: string, peerId: string) => void
   rejectInterest: (projectId: string, peerId: string) => void
+  addComment: (projectId: string, text: string) => void
   addModule: (input: { title: string; hint: string; fields: TemplateField[] }) => string
   deleteModule: (moduleId: ModuleId) => void
   moveModule: (moduleId: ModuleId, direction: -1 | 1) => void
@@ -79,6 +83,10 @@ function loadState(): AppState {
       peers: parsed.peers.map((peer) => ({
         ...peer,
         accessRole: peer.accessRole === "moderator" ? "moderator" : "participant",
+      })),
+      projects: parsed.projects.map((project) => ({
+        ...project,
+        comments: Array.isArray(project.comments) ? project.comments : [],
       })),
       passwords: {
         ...Object.fromEntries(seedPeers.map((peer) => [peer.id, "21"])),
@@ -178,6 +186,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           interestIds: [],
           answers: emptyAnswers(modules),
           pagerNote: "",
+          comments: [],
         }
         commit({ ...state, projects: [project, ...state.projects] })
         return id
@@ -256,6 +265,31 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             return {
               ...project,
               interestIds: project.interestIds.filter((id) => id !== peerId),
+            }
+          }),
+        })
+      },
+      addComment: (projectId, text) => {
+        const me = state.currentUserId
+        if (!me || state.currentRole !== "moderator") return
+        const trimmed = text.trim()
+        if (!trimmed) return
+        commit({
+          ...state,
+          projects: state.projects.map((project) => {
+            if (project.id !== projectId) return project
+            const comments = Array.isArray(project.comments) ? project.comments : []
+            return {
+              ...project,
+              comments: [
+                ...comments,
+                {
+                  id: crypto.randomUUID(),
+                  authorId: me,
+                  text: trimmed,
+                  createdAt: new Date().toISOString(),
+                },
+              ],
             }
           }),
         })
